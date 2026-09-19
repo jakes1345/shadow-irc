@@ -694,6 +694,7 @@
 
     <div class="header-stats">
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(255, 0, 127, 0.2); border-color: var(--accent-magenta); color: #fff;" onclick="toggleGuideModal(true)">❓ Guide & Tour</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptChangeServerNode()">🌐 Server Node</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptIdentifyNick()">🔑 Identify</button>
       <div class="stat-pill">
@@ -925,7 +926,7 @@
     addMsg('ChanServ', '👑 ChanServ Channel Engine. Click buttons below to REGISTER channel ownership or manage OP access.', 'system', 'ChanServ', true);
 
     function connectWebSocket() {
-      const wsUrl = 'ws://localhost:8888';
+      const wsUrl = localStorage.getItem('shadow_server_addr') || 'ws://localhost:8888';
       document.getElementById('net-status').innerText = 'CONNECTING TO ' + wsUrl + '...';
 
       try {
@@ -1277,6 +1278,22 @@
           ws.send('PRIVMSG NickServ :IDENTIFY ' + pass + '\r\n');
         }
         addMsg('status', '🔑 Sent NickServ identification request', 'system');
+      }
+    }
+
+    function promptChangeServerNode() {
+      const current = localStorage.getItem('shadow_server_addr') || 'ws://localhost:8888';
+      const newAddr = prompt('Enter SHADOW-IRC Server Node IP/URL for you and your friends to connect:\n(e.g. ws://192.168.1.100:8888 or ws://yourserver.net:8888)', current);
+      if (newAddr && newAddr.trim()) {
+        let formatted = newAddr.trim();
+        if (!formatted.startsWith('ws://') && !formatted.startsWith('wss://')) {
+          formatted = 'ws://' + formatted;
+        }
+        localStorage.setItem('shadow_server_addr', formatted);
+        if (ws) {
+          try { ws.close(); } catch(e){}
+        }
+        connectWebSocket();
       }
     }
 
