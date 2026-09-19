@@ -1,0 +1,38 @@
+{
+  "accounts": {
+    "enterprise_alice": {
+      "nickname": "enterprise_alice",
+      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
+      "email": "alice@shadow.net",
+      "registeredAt": "2026-09-19T21:19:53.769Z",
+      "lastLoginAt": "2026-09-19T21:19:53.769Z"
+    },
+    "alice_1789852839329": {
+      "nickname": "alice_1789852839329",
+      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
+      "email": "alice@shadow.net",
+      "registeredAt": "2026-09-19T21:20:39.840Z",
+      "lastLoginAt": "2026-09-19T21:20:39.840Z"
+    }
+  },
+  "channels": {
+    "#enterprise": {
+      "name": "#enterprise",
+      "founder": "enterprise_alice",
+      "registeredAt": "2026-09-19T21:19:53.770Z",
+      "passwordHash": null,
+      "topic": "Official channel #enterprise | Founder: enterprise_alice",
+      "modes": "+nt"
+    },
+    "#chan_1789852839329": {
+      "name": "#chan_1789852839329",
+      "founder": "alice_1789852839329",
+      "registeredAt": "2026-09-19T21:20:39.841Z",
+      "passwordHash": null,
+      "topic": "Official channel #chan_1789852839329 | Founder: alice_1789852839329",
+      "modes": "+nt"
+    }
+  },
+  "memos": {},
+  "vhosts": {}
+}

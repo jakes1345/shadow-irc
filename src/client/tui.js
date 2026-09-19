@@ -536,8 +536,34 @@ class ShadowIRCClient {
         this.warpSpeed = !this.warpSpeed;
         this.logMessage('status', `{bold}{#00f3ff-fg}[COSMIC ENGINE]{/#00f3ff-fg}{/bold} Hyperspace warp effect set to ${this.warpSpeed}`);
         break;
+      case 'ns':
+      case 'nickserv':
+        this.sendRaw(`PRIVMSG NickServ :${args.join(' ')}`);
+        break;
+      case 'cs':
+      case 'chanserv':
+        this.sendRaw(`PRIVMSG ChanServ :${args.join(' ')}`);
+        break;
+      case 'ms':
+      case 'memoserv':
+        this.sendRaw(`PRIVMSG MemoServ :${args.join(' ')}`);
+        break;
+      case 'hs':
+      case 'hostserv':
+        this.sendRaw(`PRIVMSG HostServ :${args.join(' ')}`);
+        break;
+      case 'bouncer':
+        this.sendRaw(`BOUNCER ${args.join(' ')}`);
+        break;
       case 'help':
-        this.logMessage(this.currentWindow, `{bold}{#00f3ff-fg}=== SHADOW-IRC COMMAND MANUAL ==={/#00f3ff-fg}{/bold}`);
+        this.logMessage(this.currentWindow, `{bold}{#00f3ff-fg}=== SHADOW-IRC v3.0 COMMAND MANUAL ==={/#00f3ff-fg}{/bold}`);
+        this.logMessage(this.currentWindow, ` /ns REGISTER <pass>     - Register nickname with NickServ`);
+        this.logMessage(this.currentWindow, ` /ns IDENTIFY <pass>     - Identify nickname password`);
+        this.logMessage(this.currentWindow, ` /cs REGISTER #channel   - Register channel with ChanServ`);
+        this.logMessage(this.currentWindow, ` /ms SEND <nick> <text>  - Send offline MemoServ memo`);
+        this.logMessage(this.currentWindow, ` /ms READ                - Read offline memos`);
+        this.logMessage(this.currentWindow, ` /hs REQUEST <vhost>     - Request custom vHost`);
+        this.logMessage(this.currentWindow, ` /bouncer enable/disable - Toggle ZNC 24/7 session persistence`);
         this.logMessage(this.currentWindow, ` /server <host> <port>   - Connect to IRC Server`);
         this.logMessage(this.currentWindow, ` /join #channel          - Join Channel`);
         this.logMessage(this.currentWindow, ` /part [#channel]        - Leave Channel`);
