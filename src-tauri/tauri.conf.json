@@ -6,7 +6,7 @@
     "distDir": "../src-desktop"
   },
   "package": {
-    "productName": "SHADOW // IRC",
+    "productName": "SHADOW-IRC",
     "version": "4.0.0"
   },
   "tauri": {
@@ -14,7 +14,7 @@
       "all": true
     },
     "bundle": {
-      "active": true,
+      "active": false,
       "category": "SocialNetworking",
       "copyright": "MIT License 2026",
       "deb": {
