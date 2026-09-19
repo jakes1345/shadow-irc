@@ -27,14 +27,22 @@ class ShadowIRCClient {
     this.warpSpeed = false;
     this.matrixMode = false;
 
-    // Initialize default status window
-    this.addWindow('status', 'SHADOW // Status Log');
-    
     // UI Screen & Widgets initialization
     this.initUI();
+
+    // Initialize default status window
+    this.addWindow('status', 'SHADOW // Status Log');
   }
 
   initUI() {
+    if (!process.stdin.isTTY) {
+      this.headless = true;
+      console.log(`\x1b[36m[SHADOW-IRC]\x1b[0m Running in CLI Stream Mode (Non-TTY)...`);
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      rl.on('line', (line) => this.handleUserSubmit(line.trim()));
+      return;
+    }
+
     this.screen = blessed.screen({
       smartCSR: true,
       title: 'SHADOW // IRC [Cosmic Cyber Network]',
@@ -323,6 +331,7 @@ class ShadowIRCClient {
       }
       idx++;
     }
+    if (!this.tabBar || !this.screen) return;
     this.tabBar.setContent(tabStr);
     this.screen.render();
   }
@@ -332,6 +341,12 @@ class ShadowIRCClient {
     const win = this.windows.get(targetWindow);
     win.messages.push(formattedMessage);
 
+    if (this.headless) {
+      const cleanMsg = formattedMessage.replace(/\{[^}]+\}/g, '');
+      console.log(`[${targetWindow}] ${cleanMsg}`);
+      return;
+    }
+
     if (this.currentWindow === targetWindow) {
       this.chatLog.add(formattedMessage);
       this.chatLog.scroll(1);
@@ -339,7 +354,7 @@ class ShadowIRCClient {
       win.unread++;
       this.renderTabs();
     }
-    this.screen.render();
+    if (this.screen) this.screen.render();
   }
 
   connect() {
@@ -642,6 +657,77 @@ class ShadowIRCClient {
         if (this.currentWindow === chan) {
           this.topicBar.setContent(` Topic: ${newTopic}`);
         }
+        break;
+      }
+      case 'MODE': {
+        const target = args[0];
+        const modeStr = args[1] || '';
+        const targetNick = args[2] || '';
+        if (target.startsWith('#')) {
+          const win = this.windows.get(target);
+          if (win) {
+            if (modeStr === '+o') {
+              win.users.delete(targetNick);
+              win.users.delete('+' + targetNick);
+              win.users.add('@' + targetNick);
+            } else if (modeStr === '-o') {
+              win.users.delete('@' + targetNick);
+              win.users.add(targetNick);
+            } else if (modeStr === '+v') {
+              if (!win.users.has('@' + targetNick)) {
+                win.users.delete(targetNick);
+                win.users.add('+' + targetNick);
+              }
+            } else if (modeStr === '-v') {
+              if (!win.users.has('@' + targetNick)) {
+                win.users.delete('+' + targetNick);
+                win.users.add(targetNick);
+              }
+            }
+            this.updateUserListUI(win);
+          }
+          this.logMessage(target, `{#64748b-fg}[${time}]{/#64748b-fg} {bold}{#b026ff-fg}* ${senderNick}{/#b026ff-fg}{/bold} set mode ${modeStr} ${targetNick}`);
+        }
+        break;
+      }
+      case 'KICK': {
+        const chan = args[0];
+        const victim = args[1];
+        const reason = args[2] || 'Kicked';
+        const win = this.windows.get(chan);
+        if (win) {
+          win.users.delete(victim);
+          win.users.delete('@' + victim);
+          win.users.delete('+' + victim);
+          this.updateUserListUI(win);
+        }
+        this.logMessage(chan, `{#64748b-fg}[${time}]{/#64748b-fg} {bold}{#ff0055-fg}* ${senderNick}{/#ff0055-fg}{/bold} kicked ${victim} (${reason})`);
+        break;
+      }
+      case 'NICK': {
+        const newNick = args[0] || trailing;
+        for (const win of this.windows.values()) {
+          if (win.users) {
+            if (win.users.has(senderNick)) { win.users.delete(senderNick); win.users.add(newNick); }
+            if (win.users.has('@' + senderNick)) { win.users.delete('@' + senderNick); win.users.add('@' + newNick); }
+            if (win.users.has('+' + senderNick)) { win.users.delete('+' + senderNick); win.users.add('+' + newNick); }
+            this.updateUserListUI(win);
+          }
+        }
+        this.logMessage(this.currentWindow, `{#64748b-fg}[${time}]{/#64748b-fg} {bold}{#00f3ff-fg}* ${senderNick}{/#00f3ff-fg}{/bold} is now known as ${newNick}`);
+        break;
+      }
+      case 'QUIT': {
+        const reason = args[0] || trailing || 'Quit';
+        for (const win of this.windows.values()) {
+          if (win.users) {
+            win.users.delete(senderNick);
+            win.users.delete('@' + senderNick);
+            win.users.delete('+' + senderNick);
+            this.updateUserListUI(win);
+          }
+        }
+        this.logMessage(this.currentWindow, `{#64748b-fg}[${time}]{/#64748b-fg} {bold}{#ff0055-fg}<-- ${senderNick}{/#ff0055-fg}{/bold} quit (${reason})`);
         break;
       }
       case '332': { // RPL_TOPIC
