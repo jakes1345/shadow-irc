@@ -13,6 +13,7 @@
     "client": "node src/client/tui.js",
     "desktop": "tauri dev",
     "build:desktop": "tauri build",
+    "install:icon": "python3 scripts/install_desktop_icon.py",
     "start": "node src/server/ircd.js"
   },
   "keywords": [

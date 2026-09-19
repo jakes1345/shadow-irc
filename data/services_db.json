@@ -1,125 +1,20 @@
 {
   "accounts": {
-    "enterprise_alice": {
-      "nickname": "enterprise_alice",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T21:19:53.769Z",
-      "lastLoginAt": "2026-09-19T21:19:53.769Z"
-    },
-    "alice_1789852839329": {
-      "nickname": "alice_1789852839329",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T21:20:39.840Z",
-      "lastLoginAt": "2026-09-19T21:20:39.840Z"
-    },
-    "alice_1789853847981": {
-      "nickname": "alice_1789853847981",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T21:37:28.495Z",
-      "lastLoginAt": "2026-09-19T21:37:28.495Z"
-    },
-    "alice_1789855251366": {
-      "nickname": "alice_1789855251366",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T22:00:51.879Z",
-      "lastLoginAt": "2026-09-19T22:00:51.879Z"
-    },
-    "alice_1789859448081": {
-      "nickname": "alice_1789859448081",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T23:10:48.593Z",
-      "lastLoginAt": "2026-09-19T23:10:48.593Z"
-    },
-    "alice_1789859567923": {
-      "nickname": "alice_1789859567923",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T23:12:48.436Z",
-      "lastLoginAt": "2026-09-19T23:12:48.436Z"
-    },
-    "alice_1789859630006": {
-      "nickname": "alice_1789859630006",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T23:13:50.519Z",
-      "lastLoginAt": "2026-09-19T23:13:50.519Z"
-    },
-    "alice_1789859737863": {
-      "nickname": "alice_1789859737863",
-      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
-      "email": "alice@shadow.net",
-      "registeredAt": "2026-09-19T23:15:38.377Z",
-      "lastLoginAt": "2026-09-19T23:15:38.377Z"
+    "alice_1789860289262": {
+      "nickname": "alice_1789860289262",
+      "salt": "369e75aabf84e6082e397efe8f847760",
+      "passHash": "af4cb11287a92329c6ebcc9fe42a25555c45a59339f90e9df5af5be2eff462ec",
+      "registeredAt": "2026-09-19T23:24:49.774Z",
+      "lastLoginAt": "2026-09-19T23:24:49.774Z"
     }
   },
   "channels": {
-    "#enterprise": {
-      "name": "#enterprise",
-      "founder": "enterprise_alice",
-      "registeredAt": "2026-09-19T21:19:53.770Z",
+    "#chan_1789860289262": {
+      "name": "#chan_1789860289262",
+      "founder": "alice_1789860289262",
+      "registeredAt": "2026-09-19T23:24:49.775Z",
       "passwordHash": null,
-      "topic": "Official channel #enterprise | Founder: enterprise_alice",
-      "modes": "+nt"
-    },
-    "#chan_1789852839329": {
-      "name": "#chan_1789852839329",
-      "founder": "alice_1789852839329",
-      "registeredAt": "2026-09-19T21:20:39.841Z",
-      "passwordHash": null,
-      "topic": "Official channel #chan_1789852839329 | Founder: alice_1789852839329",
-      "modes": "+nt"
-    },
-    "#chan_1789853847981": {
-      "name": "#chan_1789853847981",
-      "founder": "alice_1789853847981",
-      "registeredAt": "2026-09-19T21:37:28.496Z",
-      "passwordHash": null,
-      "topic": "Official channel #chan_1789853847981 | Founder: alice_1789853847981",
-      "modes": "+nt"
-    },
-    "#chan_1789855251366": {
-      "name": "#chan_1789855251366",
-      "founder": "alice_1789855251366",
-      "registeredAt": "2026-09-19T22:00:51.880Z",
-      "passwordHash": null,
-      "topic": "Official channel #chan_1789855251366 | Founder: alice_1789855251366",
-      "modes": "+nt"
-    },
-    "#chan_1789859448081": {
-      "name": "#chan_1789859448081",
-      "founder": "alice_1789859448081",
-      "registeredAt": "2026-09-19T23:10:48.594Z",
-      "passwordHash": null,
-      "topic": "Official channel #chan_1789859448081 | Founder: alice_1789859448081",
-      "modes": "+nt"
-    },
-    "#chan_1789859567923": {
-      "name": "#chan_1789859567923",
-      "founder": "alice_1789859567923",
-      "registeredAt": "2026-09-19T23:12:48.437Z",
-      "passwordHash": null,
-      "topic": "Official channel #chan_1789859567923 | Founder: alice_1789859567923",
-      "modes": "+nt"
-    },
-    "#chan_1789859630006": {
-      "name": "#chan_1789859630006",
-      "founder": "alice_1789859630006",
-      "registeredAt": "2026-09-19T23:13:50.520Z",
-      "passwordHash": null,
-      "topic": "Official channel #chan_1789859630006 | Founder: alice_1789859630006",
-      "modes": "+nt"
-    },
-    "#chan_1789859737863": {
-      "name": "#chan_1789859737863",
-      "founder": "alice_1789859737863",
-      "registeredAt": "2026-09-19T23:15:38.378Z",
-      "passwordHash": null,
-      "topic": "Official channel #chan_1789859737863 | Founder: alice_1789859737863",
+      "topic": "Official channel #chan_1789860289262 | Founder: alice_1789860289262",
       "modes": "+nt"
     }
   },
