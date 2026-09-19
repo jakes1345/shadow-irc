@@ -2,7 +2,13 @@ import net from 'net';
 import http from 'http';
 import tls from 'tls';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import { IRCServicesEngine } from './services.js';
 import { IRCv3HistoryEngine, IRCv3CapNegotiator } from './ircv3.js';
@@ -834,144 +840,20 @@ class ShadowIRCServer {
   }
 
   handleHttpRequest(req, res) {
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>🌌 SHADOW // IRC [Cosmic Space Network]</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', monospace; }
-    body { background: #030308; color: #00f3ff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-    canvas { position: absolute; top:0; left:0; width:100%; height:100%; z-index: -1; }
-    header { background: rgba(7,7,18,0.85); padding: 12px; border-bottom: 1px solid #8a2be2; display: flex; justify-content: space-between; align-items: center; }
-    h1 { font-size: 18px; color: #ff007f; text-shadow: 0 0 10px #ff007f; }
-    #main { display: flex; flex: 1; height: calc(100vh - 100px); }
-    #chat { flex: 1; background: rgba(3,3,8,0.7); padding: 15px; overflow-y: auto; border-right: 1px solid #1d1d3d; }
-    #users { width: 220px; background: rgba(7,7,18,0.85); padding: 15px; border-left: 1px solid #8a2be2; }
-    .msg { margin-bottom: 8px; line-height: 1.4; word-break: break-word; }
-    .time { color: #64748b; font-size: 12px; }
-    .nick { color: #00f3ff; font-weight: bold; }
-    .system { color: #ffaa00; }
-    .op { color: #ff007f; font-weight: bold; }
-    .action { color: #d000ff; font-style: italic; }
-    #input-bar { background: rgba(7,7,18,0.9); padding: 12px; border-top: 1px solid #00f3ff; display: flex; }
-    input { flex: 1; background: #070712; border: 1px solid #8a2be2; color: #00ff41; padding: 10px; outline: none; font-size: 14px; }
-    button { background: #8a2be2; color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
-    button:hover { background: #ff007f; }
-  </style>
-</head>
-<body>
-  <canvas id="space"></canvas>
-  <header>
-    <h1>🌌 SHADOW // IRC [Cosmic Space Network]</h1>
-    <span id="status">Status: Connecting...</span>
-  </header>
-  <div id="main">
-    <div id="chat"></div>
-    <div id="users">
-      <h3 style="color:#ff007f; margin-bottom:10px;">USERS</h3>
-      <ul id="user-list" style="list-style:none;"></ul>
-    </div>
-  </div>
-  <div id="input-bar">
-    <input type="text" id="prompt" placeholder="Type /me floats in deep space or /join #cosmos..." autofocus />
-    <button onclick="sendMsg()">SEND</button>
-  </div>
-
-  <script>
-    const canvas = document.getElementById('space');
-    const ctx = canvas.getContext('2d');
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.onresize = resize; resize();
-    const stars = Array.from({length: 150}, () => ({
-      x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2, color: ['#00f3ff','#ff007f','#8a2be2','#00ff66'][Math.floor(Math.random()*4)]
-    }));
-    function drawStars() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      stars.forEach(s => {
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-        ctx.fillStyle = s.color; ctx.shadowBlur = 8; ctx.shadowColor = s.color; ctx.fill();
-        s.y += 0.2; if (s.y > canvas.height) s.y = 0;
-      });
-      requestAnimationFrame(drawStars);
-    }
-    drawStars();
-
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(protocol + '//' + location.host);
-    const chat = document.getElementById('chat');
-    const status = document.getElementById('status');
-    const userList = document.getElementById('user-list');
-    const prompt = document.getElementById('prompt');
-    let myNick = 'cosmic_user_' + Math.floor(Math.random()*8999+1000);
-
-    ws.onopen = () => {
-      status.innerText = 'Connected as ' + myNick;
-      ws.send('CAP REQ :server-time echo-message\\r\\n');
-      ws.send('CAP END\\r\\n');
-      ws.send('NICK ' + myNick + '\\r\\n');
-      ws.send('USER ' + myNick + ' 0 * :Shadow Cosmic Web Client\\r\\n');
-      ws.send('JOIN #cosmos\\r\\n');
-    };
-
-    ws.onmessage = (e) => {
-      const line = e.data.trim();
-      const div = document.createElement('div');
-      div.className = 'msg';
-      const time = new Date().toLocaleTimeString();
-
-      // CTCP ACTION /me handling
-      if (line.includes('\\x01ACTION ') || line.includes('\x01ACTION ')) {
-        const nickMatch = line.match(/:([^!]+)!/);
-        const sender = nickMatch ? nickMatch[1] : 'user';
-        const actionText = line.substring(line.indexOf('ACTION ') + 7).replace(/\\x01/g, '').replace(/\x01/g, '');
-        div.innerHTML = '<span class="time">[' + time + ']</span> <span class="action">* ' + escapeHtml(sender) + ' ' + escapeHtml(actionText) + '</span>';
-      } else {
-        div.innerHTML = '<span class="time">[' + time + ']</span> ' + escapeHtml(line);
+    try {
+      const desktopHtmlPath = path.join(__dirname, '../../src-desktop/index.html');
+      if (fs.existsSync(desktopHtmlPath)) {
+        const html = fs.readFileSync(desktopHtmlPath, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(html);
+        return;
       }
-      
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-
-      if (line.includes(' 353 ')) {
-        const parts = line.split(' :');
-        if (parts[1]) {
-          userList.innerHTML = parts[1].split(' ').map(u => '<li class="' + (u.startsWith('@')?'op':'nick') + '">' + escapeHtml(u) + '</li>').join('');
-        }
-      }
-    };
-
-    function sendMsg() {
-      const text = prompt.value.trim();
-      if (!text) return;
-      prompt.value = '';
-      if (text.startsWith('/me ')) {
-        ws.send('PRIVMSG #cosmos :\\x01ACTION ' + text.substring(4) + '\\x01\\r\\n');
-        const div = document.createElement('div');
-        div.className = 'msg';
-        div.innerHTML = '<span class="time">[' + new Date().toLocaleTimeString() + ']</span> <span class="action">* ' + myNick + ' ' + escapeHtml(text.substring(4)) + '</span>';
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-      } else if (text.startsWith('/')) {
-        ws.send(text.substring(1) + '\\r\\n');
-      } else {
-        ws.send('PRIVMSG #cosmos :' + text + '\\r\\n');
-        const div = document.createElement('div');
-        div.className = 'msg';
-        div.innerHTML = '<span class="time">[' + new Date().toLocaleTimeString() + ']</span> <span class="op">&lt;' + myNick + '&gt;</span> ' + escapeHtml(text);
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-      }
+    } catch (err) {
+      console.error('[HTTP ERROR]', err.message);
     }
 
-    prompt.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
-    function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  </script>
-</body>
-</html>`;
-
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(html);
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('SHADOW-IRCD Web Gateway: Index File Not Found');
   }
 }
 
