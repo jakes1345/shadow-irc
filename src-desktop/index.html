@@ -578,6 +578,8 @@
     </div>
 
     <div class="header-stats">
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptIdentifyNick()">🔑 Identify</button>
       <div class="stat-pill">
         <div class="status-dot" id="status-indicator"></div>
         <span id="net-status">CONNECTING...</span>
@@ -1076,6 +1078,26 @@
     function promptJoinChannel() {
       const name = prompt('Enter channel name to join (e.g. #quantum, #nebula):', '#stardust');
       if (name) sendQuickCmd('/join ' + name);
+    }
+
+    function promptRegisterNick() {
+      const pass = prompt('Enter a password to register your nickname (' + myNick + ') with NickServ:\n(Zero email or phone number required!)');
+      if (pass) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send('PRIVMSG NickServ :REGISTER ' + pass + '\r\n');
+        }
+        addMsg('status', '🛡️ Sent NickServ registration request for ' + myNick, 'system');
+      }
+    }
+
+    function promptIdentifyNick() {
+      const pass = prompt('Enter password for ' + myNick + ' to Identify with NickServ:');
+      if (pass) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send('PRIVMSG NickServ :IDENTIFY ' + pass + '\r\n');
+        }
+        addMsg('status', '🔑 Sent NickServ identification request', 'system');
+      }
     }
 
     document.getElementById('cmd-input').addEventListener('keydown', (e) => {
