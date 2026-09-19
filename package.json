@@ -1,0 +1,35 @@
+{
+  "name": "shadow-irc",
+  "version": "1.0.0",
+  "description": "SHADOW-IRC: Pure Native TCP IRC Server Daemon (shadow-ircd) and Terminal TUI Client (shadow-irc) with 24-bit TrueColor cosmic nebula aesthetics, RFC 1459/2812 parser, and E2EE.",
+  "main": "src/server/ircd.js",
+  "type": "module",
+  "bin": {
+    "shadow-ircd": "./bin/shadow-ircd",
+    "shadow-irc": "./bin/shadow-irc"
+  },
+  "scripts": {
+    "server": "node src/server/ircd.js",
+    "client": "node src/client/tui.js",
+    "start": "node src/server/ircd.js"
+  },
+  "keywords": [
+    "irc",
+    "ircd",
+    "tui",
+    "terminal-irc",
+    "space-theme",
+    "cyberpunk",
+    "hacker-ui",
+    "nebula",
+    "e2ee",
+    "tcp-sockets",
+    "rfc1459",
+    "rfc2812"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "neo-blessed": "^0.2.0"
+  }
+}
