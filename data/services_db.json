@@ -41,6 +41,20 @@
       "email": "alice@shadow.net",
       "registeredAt": "2026-09-19T23:12:48.436Z",
       "lastLoginAt": "2026-09-19T23:12:48.436Z"
+    },
+    "alice_1789859630006": {
+      "nickname": "alice_1789859630006",
+      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
+      "email": "alice@shadow.net",
+      "registeredAt": "2026-09-19T23:13:50.519Z",
+      "lastLoginAt": "2026-09-19T23:13:50.519Z"
+    },
+    "alice_1789859737863": {
+      "nickname": "alice_1789859737863",
+      "passHash": "f16b6bfaf0b14c86de22def8070aff0d483fcb5178504febdfaf209a6abec715",
+      "email": "alice@shadow.net",
+      "registeredAt": "2026-09-19T23:15:38.377Z",
+      "lastLoginAt": "2026-09-19T23:15:38.377Z"
     }
   },
   "channels": {
@@ -90,6 +104,22 @@
       "registeredAt": "2026-09-19T23:12:48.437Z",
       "passwordHash": null,
       "topic": "Official channel #chan_1789859567923 | Founder: alice_1789859567923",
+      "modes": "+nt"
+    },
+    "#chan_1789859630006": {
+      "name": "#chan_1789859630006",
+      "founder": "alice_1789859630006",
+      "registeredAt": "2026-09-19T23:13:50.520Z",
+      "passwordHash": null,
+      "topic": "Official channel #chan_1789859630006 | Founder: alice_1789859630006",
+      "modes": "+nt"
+    },
+    "#chan_1789859737863": {
+      "name": "#chan_1789859737863",
+      "founder": "alice_1789859737863",
+      "registeredAt": "2026-09-19T23:15:38.378Z",
+      "passwordHash": null,
+      "topic": "Official channel #chan_1789859737863 | Founder: alice_1789859737863",
       "modes": "+nt"
     }
   },
