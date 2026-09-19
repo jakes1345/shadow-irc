@@ -1,0 +1,11 @@
+/media/jack/New Volume/sadow-irc/src-tauri/target/debug/deps/futures_task-0636da43811a8a12.d: /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/lib.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/spawn.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/arc_wake.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/waker.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/waker_ref.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/future_obj.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/noop_waker.rs
+
+/media/jack/New Volume/sadow-irc/src-tauri/target/debug/deps/libfutures_task-0636da43811a8a12.rmeta: /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/lib.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/spawn.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/arc_wake.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/waker.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/waker_ref.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/future_obj.rs /home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/noop_waker.rs
+
+/home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/lib.rs:
+/home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/spawn.rs:
+/home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/arc_wake.rs:
+/home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/waker.rs:
+/home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/waker_ref.rs:
+/home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/future_obj.rs:
+/home/jack/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/futures-task-0.3.34/src/noop_waker.rs:

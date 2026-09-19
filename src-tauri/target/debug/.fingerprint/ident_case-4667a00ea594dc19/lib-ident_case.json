@@ -1,0 +1,1 @@
+{"rustc":1100337564441796057,"features":"[]","declared_features":"[]","target":5776078485490251590,"profile":2225463790103693989,"path":2641281706022600091,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/ident_case-4667a00ea594dc19/dep-lib-ident_case","checksum":false}}],"rustflags":["-C","link-arg=-fuse-ld=mold"],"config":15564086925336547597,"compile_kind":0}

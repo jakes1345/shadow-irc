@@ -1,7 +1,7 @@
 {
   "name": "shadow-irc",
   "version": "4.0.0",
-  "description": "SHADOW-IRC: Native Tauri Desktop App (Linux, Windows, macOS) & Terminal TUI Suite with Deep Space Nebula Aesthetics.",
+  "description": "SHADOW-IRC: Native Tauri v2 Desktop App (Linux, Windows, macOS) & Terminal TUI Suite with Deep Space Nebula Aesthetics.",
   "main": "src/server/ircd.js",
   "type": "module",
   "bin": {
@@ -19,7 +19,7 @@
     "irc",
     "ircd",
     "tui",
-    "tauri",
+    "tauri-v2",
     "desktop-app",
     "space-theme",
     "nebula",
@@ -32,11 +32,11 @@
   "author": "Antigravity",
   "license": "MIT",
   "dependencies": {
-    "@tauri-apps/api": "^1.6.0",
+    "@tauri-apps/api": "^2.1.1",
     "neo-blessed": "^0.2.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.6.0"
+    "@tauri-apps/cli": "^2.1.0"
   }
 }
