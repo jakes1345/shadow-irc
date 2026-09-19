@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌌 SHADOW-IRC: Ultra-Private Deep Space Network Suite</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <!-- Google Fonts: Outfit, Space Grotesk, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-void: #03010a;
+      --bg-card: rgba(12, 10, 28, 0.72);
+      --glass-border: rgba(138, 43, 226, 0.28);
+      --glass-border-bright: rgba(0, 243, 255, 0.5);
+      --accent-cyan: #00f3ff;
+      --accent-cyan-glow: rgba(0, 243, 255, 0.35);
+      --accent-violet: #9d4edd;
+      --accent-magenta: #ff007f;
+      --accent-magenta-glow: rgba(255, 0, 127, 0.35);
+      --accent-green: #00ff9d;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --font-ui: 'Outfit', sans-serif;
+      --font-heading: 'Space Grotesk', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background: var(--bg-void);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    canvas#nebula {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    header {
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand img { width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 0 20px var(--accent-cyan-glow); }
+    .brand-title { font-family: var(--font-heading); font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+
+    .hero {
+      max-width: 1000px;
+      margin: 80px auto 40px;
+      text-align: center;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .hero-logo {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      box-shadow: 0 0 50px var(--accent-cyan-glow), 0 0 80px var(--accent-magenta-glow);
+      animation: float 4s infinite ease-in-out;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    h1 {
+      font-family: var(--font-heading);
+      font-size: 48px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff 30%, var(--accent-cyan) 70%, var(--accent-magenta) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+    }
+
+    p.subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-magenta), var(--accent-violet));
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      box-shadow: 0 4px 25px var(--accent-magenta-glow);
+      transition: all 0.25s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 35px var(--accent-magenta-glow);
+    }
+
+    .btn-secondary {
+      background: rgba(0, 243, 255, 0.1);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      box-shadow: 0 0 25px var(--accent-cyan-glow);
+    }
+
+    .features-grid {
+      max-width: 1100px;
+      margin: 60px auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      padding: 0 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-cyan);
+    }
+
+    .feature-icon { font-size: 28px; }
+    .feature-title { font-family: var(--font-heading); font-size: 18px; color: var(--accent-cyan); }
+    .feature-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+    footer {
+      text-align: center;
+      padding: 40px;
+      border-top: 1px solid var(--glass-border);
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="nebula"></canvas>
+
+  <header>
+    <div class="brand">
+      <img src="logo.png" alt="SHADOW-IRC Logo">
+      <div class="brand-title">SHADOW // IRC</div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <img src="logo.png" alt="SHADOW-IRC Master Emblem" class="hero-logo">
+    <h1>Zero-Data Deep Space Anonymous IRC Suite</h1>
+    <p class="subtitle">100% Free & Open-Source (MIT). Native Tauri v2 Desktop App & 24-bit TrueColor Terminal Client. No Web Registration. No Email. No Phone. Automatic IP Cloaking.</p>
+
+    <div class="cta-buttons">
+      <a href="#downloads" class="btn-primary">🚀 Download Desktop App</a>
+      <a href="#setup" class="btn-secondary">📖 How Friends Connect</a>
+    </div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Zero Personal Data</div>
+      <div class="feature-desc">No email address, phone number, or real name required. Registration happens 100% in-protocol via NickServ using PBKDF2 crypto hashes.</div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">🚨</div>
+      <div class="feature-title">Anti-Forensic Panic Switch</div>
+      <div class="feature-desc">Execute <code>/nuke</code> or <code>/panic</code> to immediately zero-fill all RAM message buffers and overwrite disk storage with noise in &lt; 0.1s.</div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">Automatic IP Cloaking</div>
+      <div class="feature-desc">All connected users automatically receive cloaked hostnames (<code>user@cosmos/shadow/x-hash</code>) to shield real IP addresses.</div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <div class="feature-title">1-on-1 Direct Messaging & Services</div>
+      <div class="feature-desc">Full 1-on-1 DMs with click-to-DM user list, built-in NickServ, ChanServ, MemoServ, HostServ, and ZNC 24/7 Bouncer persistence.</div>
+    </div>
+  </div>
+
+  <footer id="setup">
+    <p>🌌 SHADOW-IRC v4.0 Ultimate Space Edition | Released under MIT License</p>
+  </footer>
+
+  <script>
+    const canvas = document.getElementById('nebula');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.onresize = () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; };
+
+    const stars = Array.from({ length: 180 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 2 + 0.5,
+      color: ['#00f3ff', '#9d4edd', '#ff007f', '#00ff9d'][Math.floor(Math.random() * 4)],
+      speed: Math.random() * 0.2 + 0.05
+    }));
+
+    function draw() {
+      ctx.fillStyle = '#03010a';
+      ctx.fillRect(0, 0, width, height);
+
+      stars.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = s.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = s.color;
+        ctx.fill();
+        s.y += s.speed;
+        if (s.y > height) s.y = 0;
+      });
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</body>
+</html>
