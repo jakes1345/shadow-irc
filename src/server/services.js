@@ -103,17 +103,17 @@ export class IRCServicesEngine {
         const password = args[0];
 
         if (!client.nickname) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname || '*'} :You must have a nickname to register.`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname || '*'} :You must have a nickname to register.`);
           return;
         }
         if (!password) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: REGISTER <password>`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Syntax: REGISTER <password>`);
           return;
         }
 
         const nickLower = client.nickname.toLowerCase();
         if (this.accounts.has(nickLower)) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Nickname ${client.nickname} is already registered.`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Nickname ${client.nickname} is already registered.`);
           return;
         }
 
@@ -132,13 +132,13 @@ export class IRCServicesEngine {
         client.identified = true;
         this.saveDB();
 
-        sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Nickname ${client.nickname} is now registered under account ${client.nickname}!`);
+        sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Nickname ${client.nickname} is now registered under account ${client.nickname}!`);
         break;
       }
       case 'IDENTIFY': {
         const password = args[0];
         if (!password) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: IDENTIFY <password>`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Syntax: IDENTIFY <password>`);
           return;
         }
 
@@ -146,7 +146,7 @@ export class IRCServicesEngine {
         const account = this.accounts.get(nickLower);
 
         if (!account) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Nickname ${client.nickname} is not registered.`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Nickname ${client.nickname} is not registered.`);
           return;
         }
 
@@ -158,15 +158,15 @@ export class IRCServicesEngine {
           account.lastLoginAt = new Date().toISOString();
           this.saveDB();
 
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Password accepted - you are now identified for ${client.nickname}.`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Password accepted - you are now identified for ${client.nickname}.`);
           
           // Check MemoServ unread memos
           const memoList = this.memos.get(nickLower) || [];
           if (memoList.length > 0) {
-            sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :You have ${memoList.length} unread memo(s). Type /msg MemoServ READ to view.`);
+            sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :You have ${memoList.length} unread memo(s). Type /msg MemoServ READ to view.`);
           }
         } else {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Password incorrect.`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Password incorrect.`);
         }
         break;
       }
@@ -175,7 +175,7 @@ export class IRCServicesEngine {
         const password = args[1];
 
         if (!targetNick) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: GHOST <nickname> [password]`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Syntax: GHOST <nickname> [password]`);
           return;
         }
 
@@ -183,7 +183,7 @@ export class IRCServicesEngine {
         const account = this.accounts.get(targetLower);
 
         if (!account) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Nickname ${targetNick} is not registered.`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Nickname ${targetNick} is not registered.`);
           return;
         }
 
@@ -194,17 +194,17 @@ export class IRCServicesEngine {
           if (ghostClient) {
             serverState.send(ghostClient, `ERROR :Ghosted by ${client.nickname}`);
             serverState.closeClient(ghostClient);
-            sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Ghost connection for ${targetNick} has been terminated.`);
+            sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Ghost connection for ${targetNick} has been terminated.`);
           } else {
-            sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :No active connection found for ${targetNick}.`);
+            sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :No active connection found for ${targetNick}.`);
           }
         } else {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Permission denied for GHOST ${targetNick}.`);
+          sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :Permission denied for GHOST ${targetNick}.`);
         }
         break;
       }
       default: {
-        sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :NickServ Commands: REGISTER <pass>, IDENTIFY <pass>, GHOST <nick> [pass]`);
+        sendFunc(`:NickServ!Services@shadowspace.space NOTICE ${client.nickname} :NickServ Commands: REGISTER <pass>, IDENTIFY <pass>, GHOST <nick> [pass]`);
         break;
       }
     }
@@ -222,17 +222,17 @@ export class IRCServicesEngine {
         const password = args[1] || '';
 
         if (!client.identified || !client.account) {
-          sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :You must be identified with NickServ to register a channel.`);
+          sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :You must be identified with NickServ to register a channel.`);
           return;
         }
         if (!chanName || !chanName.startsWith('#')) {
-          sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: REGISTER #channel [password]`);
+          sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :Syntax: REGISTER #channel [password]`);
           return;
         }
 
         const chanLower = chanName.toLowerCase();
         if (this.channels.has(chanLower)) {
-          sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Channel ${chanName} is already registered.`);
+          sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :Channel ${chanName} is already registered.`);
           return;
         }
 
@@ -248,7 +248,7 @@ export class IRCServicesEngine {
         this.channels.set(chanLower, channelReg);
         this.saveDB();
 
-        sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Channel ${chanName} is now registered with ${client.nickname} as Founder!`);
+        sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :Channel ${chanName} is now registered with ${client.nickname} as Founder!`);
         break;
       }
       case 'OP': {
@@ -256,7 +256,7 @@ export class IRCServicesEngine {
         const targetNick = args[1] || client.nickname;
 
         if (!chanName) {
-          sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: OP #channel [nickname]`);
+          sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :Syntax: OP #channel [nickname]`);
           return;
         }
 
@@ -269,16 +269,16 @@ export class IRCServicesEngine {
 
           if (liveChan && targetClient && liveChan.members.has(targetClient)) {
             liveChan.ops.add(targetClient);
-            serverState.broadcastChannel(liveChan, `:ChanServ!Services@shadow.cosmos.net MODE ${liveChan.name} +o ${targetClient.nickname}`);
-            sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Granted Op status to ${targetClient.nickname} in ${chanName}.`);
+            serverState.broadcastChannel(liveChan, `:ChanServ!Services@shadowspace.space MODE ${liveChan.name} +o ${targetClient.nickname}`);
+            sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :Granted Op status to ${targetClient.nickname} in ${chanName}.`);
           }
         } else {
-          sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Permission denied for ChanServ OP in ${chanName}.`);
+          sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :Permission denied for ChanServ OP in ${chanName}.`);
         }
         break;
       }
       default: {
-        sendFunc(`:ChanServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :ChanServ Commands: REGISTER #channel [pass], OP #channel [nick]`);
+        sendFunc(`:ChanServ!Services@shadowspace.space NOTICE ${client.nickname} :ChanServ Commands: REGISTER #channel [pass], OP #channel [nick]`);
         break;
       }
     }
@@ -296,16 +296,16 @@ export class IRCServicesEngine {
         const text = args.slice(1).join(' ');
 
         if (!client.identified) {
-          sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :You must be identified with NickServ to send memos.`);
+          sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :You must be identified with NickServ to send memos.`);
           return;
         }
         if (!targetAccount || !text) {
-          sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: SEND <targetAccount/Nick> <message>`);
+          sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :Syntax: SEND <targetAccount/Nick> <message>`);
           return;
         }
 
         if (!this.accounts.has(targetAccount)) {
-          sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Account ${targetAccount} does not exist.`);
+          sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :Account ${targetAccount} does not exist.`);
           return;
         }
 
@@ -321,31 +321,31 @@ export class IRCServicesEngine {
         });
 
         this.saveDB();
-        sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Memo sent to ${targetAccount}.`);
+        sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :Memo sent to ${targetAccount}.`);
         break;
       }
       case 'READ': {
         if (!client.identified || !client.account) {
-          sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :You must be identified to read memos.`);
+          sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :You must be identified to read memos.`);
           return;
         }
 
         const memoList = this.memos.get(client.account) || [];
         if (memoList.length === 0) {
-          sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :You have no memos.`);
+          sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :You have no memos.`);
           return;
         }
 
-        sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :--- MEMO LIST FOR ${client.nickname} ---`);
+        sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :--- MEMO LIST FOR ${client.nickname} ---`);
         let idx = 1;
         for (const m of memoList) {
-          sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :[${idx}] From ${m.sender} (${m.time}): ${m.text}`);
+          sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :[${idx}] From ${m.sender} (${m.time}): ${m.text}`);
           idx++;
         }
         break;
       }
       default: {
-        sendFunc(`:MemoServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :MemoServ Commands: SEND <nick> <msg>, READ`);
+        sendFunc(`:MemoServ!Services@shadowspace.space NOTICE ${client.nickname} :MemoServ Commands: SEND <nick> <msg>, READ`);
         break;
       }
     }
@@ -361,9 +361,9 @@ export class IRCServicesEngine {
       client.hostname = vhost;
       this.vhosts.set(client.nickname.toLowerCase(), vhost);
       this.saveDB();
-      sendFunc(`:HostServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Your vHost has been set to ${vhost}!`);
+      sendFunc(`:HostServ!Services@shadowspace.space NOTICE ${client.nickname} :Your vHost has been set to ${vhost}!`);
     } else {
-      sendFunc(`:HostServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :HostServ Syntax: REQUEST <vhost>`);
+      sendFunc(`:HostServ!Services@shadowspace.space NOTICE ${client.nickname} :HostServ Syntax: REQUEST <vhost>`);
     }
   }
 

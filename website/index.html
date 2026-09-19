@@ -209,30 +209,89 @@
     <div class="feature-card">
       <div class="feature-icon">🛡️</div>
       <div class="feature-title">Zero Personal Data</div>
-      <div class="feature-desc">No email address, phone number, or real name required. Registration happens 100% in-protocol via NickServ using PBKDF2 crypto hashes.</div>
+      <div class="feature-desc">No email address, phone number, or real name required. Registration happens 100% in-protocol via NickServ using PBKDF2 salt-hashed credentials.</div>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">🚨</div>
       <div class="feature-title">Anti-Forensic Panic Switch</div>
-      <div class="feature-desc">Execute <code>/nuke</code> or <code>/panic</code> to immediately zero-fill all RAM message buffers and overwrite disk storage with noise in &lt; 0.1s.</div>
+      <div class="feature-desc">Execute <code>/nuke</code> or <code>/panic</code> to immediately zero-fill all RAM message buffers and overwrite disk storage with cryptographic noise in &lt; 0.1s.</div>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">🔒</div>
       <div class="feature-title">Automatic IP Cloaking</div>
-      <div class="feature-desc">All connected users automatically receive cloaked hostnames (<code>user@cosmos/shadow/x-hash</code>) to shield real IP addresses.</div>
+      <div class="feature-desc">All connected users automatically receive cloaked hostnames (<code>user@cosmos/shadow/x-hash</code>) to shield real IP addresses across all rooms.</div>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">💬</div>
-      <div class="feature-title">1-on-1 Direct Messaging & Services</div>
-      <div class="feature-desc">Full 1-on-1 DMs with click-to-DM user list, built-in NickServ, ChanServ, MemoServ, HostServ, and ZNC 24/7 Bouncer persistence.</div>
+      <div class="feature-title">1-on-1 DMs & Services</div>
+      <div class="feature-desc">Full 1-on-1 Direct Messaging, built-in NickServ, ChanServ, MemoServ, HostServ, IRCv3 replay history, and ZNC 24/7 Bouncer persistence.</div>
     </div>
   </div>
 
-  <footer id="setup">
-    <p>🌌 SHADOW-IRC v4.0 Ultimate Space Edition | Released under MIT License</p>
+  <section id="downloads" style="max-width: 1100px; margin: 60px auto; padding: 0 20px;">
+    <h2 style="font-family: var(--font-heading); font-size: 32px; text-align: center; margin-bottom: 30px; color: var(--accent-cyan);">🌌 Get SHADOW-IRC Client Suite</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+      <div class="feature-card">
+        <h3 style="font-family: var(--font-heading); font-size: 20px; color: #fff;">🖥️ Native Tauri v2 Desktop App</h3>
+        <p class="feature-desc">Glassmorphism UI, dynamic canvas stardust, tray applet integration, audio chimes, and click-to-DM sidebar.</p>
+        <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+          <a href="#" style="background: rgba(0, 243, 255, 0.15); border: 1px solid var(--accent-cyan); color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 600; font-size: 13px;">🐧 Linux (.AppImage / .deb)</a>
+          <a href="#" style="background: rgba(157, 78, 221, 0.15); border: 1px solid var(--accent-violet); color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 600; font-size: 13px;">🪟 Windows (.msi / .exe)</a>
+          <a href="#" style="background: rgba(255, 0, 127, 0.15); border: 1px solid var(--accent-magenta); color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 600; font-size: 13px;">🍏 macOS (.dmg)</a>
+        </div>
+      </div>
+
+      <div class="feature-card">
+        <h3 style="font-family: var(--font-heading); font-size: 20px; color: #fff;">💻 24-bit TrueColor Terminal TUI</h3>
+        <p class="feature-desc">Zero GUI dependencies. Runs in any SSH session or terminal emulator with Blessed-contrib dashboard styling.</p>
+        <div style="background: rgba(0, 0, 0, 0.6); padding: 12px; border-radius: 8px; font-family: var(--font-code); font-size: 12px; color: var(--accent-green); margin-top: 15px;">
+          $ git clone https://github.com/yourname/shadow-irc<br>
+          $ cd shadow-irc && npm install<br>
+          $ npm run terminal
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="setup" style="max-width: 1100px; margin: 60px auto; padding: 0 20px;">
+    <h2 style="font-family: var(--font-heading); font-size: 32px; text-align: center; margin-bottom: 30px; color: var(--accent-magenta);">🛰️ How Friends Connect to shadowspace.space</h2>
+    <div class="feature-card">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        <div>
+          <h4 style="color: var(--accent-cyan); margin-bottom: 8px;">1. Connect Node Address</h4>
+          <p class="feature-desc">Set Server Node in Desktop App or Terminal to:</p>
+          <code style="display: block; background: #000; padding: 10px; border-radius: 6px; color: var(--accent-cyan); font-family: var(--font-code); margin-top: 6px;">shadowspace.space:6667 (TCP)<br>ws://shadowspace.space:8888 (WebSocket)</code>
+        </div>
+        <div>
+          <h4 style="color: var(--accent-magenta); margin-bottom: 8px;">2. Register In-Protocol (No Email)</h4>
+          <p class="feature-desc">Protect your nickname directly inside chat:</p>
+          <code style="display: block; background: #000; padding: 10px; border-radius: 6px; color: var(--accent-green); font-family: var(--font-code); margin-top: 6px;">/msg NickServ REGISTER &lt;password&gt;<br>/msg NickServ IDENTIFY &lt;password&gt;</code>
+        </div>
+        <div>
+          <h4 style="color: var(--accent-green); margin-bottom: 8px;">3. Direct Messages & Cloaking</h4>
+          <p class="feature-desc">Double click any handle or type <code>/query &lt;nick&gt;</code> to open private 1-on-1 DMs. Your IP is cloaked automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="namecheap" style="max-width: 1100px; margin: 60px auto; padding: 0 20px;">
+    <h2 style="font-family: var(--font-heading); font-size: 32px; text-align: center; margin-bottom: 30px; color: var(--accent-violet);">🌐 Namecheap Domain Setup Guide</h2>
+    <div class="feature-card">
+      <h3 style="color: #fff; margin-bottom: 12px;">Step-by-Step for shadowspace.space:</h3>
+      <ol style="color: var(--text-muted); font-size: 14px; line-height: 1.8; margin-left: 20px;">
+        <li><strong style="color: var(--accent-cyan);">Namecheap DNS Configuration:</strong> Log into Namecheap &gt; Domain List &gt; <code>shadowspace.space</code> &gt; Advanced DNS. Add an <strong>A Record</strong> pointing <code>@</code> to your VPS IP address.</li>
+        <li><strong style="color: var(--accent-cyan);">Upload Website Files:</strong> Upload the contents of the <code>website/</code> directory (including <code>index.html</code> and <code>logo.png</code>) to your web hosting root (e.g. <code>public_html/</code> on Namecheap Shared Hosting or cPanel).</li>
+        <li><strong style="color: var(--accent-cyan);">Run Server Daemon:</strong> Run <code>npm start</code> on your VPS so <code>shadowspace.space</code> listens on TCP port <code>6667</code> and WebSocket port <code>8888</code>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer style="text-align: center; padding: 40px; border-top: 1px solid var(--glass-border); color: var(--text-muted); font-size: 13px;">
+    <p>🌌 SHADOW-IRC v4.0 Ultimate Space Edition | Configured for <strong>shadowspace.space</strong> | Released under MIT License</p>
   </footer>
 
   <script>

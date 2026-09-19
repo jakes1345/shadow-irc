@@ -36,7 +36,7 @@ class ShadowIRCServer {
     this.port = options.port || 6667;
     this.webPort = options.webPort || 8888;
     this.host = options.host || '0.0.0.0';
-    this.serverName = options.serverName || 'shadow.cosmos.net';
+    this.serverName = options.serverName || 'shadowspace.space';
     this.version = 'shadow-ircd-4.0.0-cosmic-space';
     this.createdDate = new Date().toISOString();
     

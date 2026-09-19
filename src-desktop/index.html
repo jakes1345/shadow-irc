@@ -1282,8 +1282,8 @@
     }
 
     function promptChangeServerNode() {
-      const current = localStorage.getItem('shadow_server_addr') || 'ws://localhost:8888';
-      const newAddr = prompt('Enter SHADOW-IRC Server Node IP/URL for you and your friends to connect:\n(e.g. ws://192.168.1.100:8888 or ws://yourserver.net:8888)', current);
+      const current = localStorage.getItem('shadow_server_addr') || 'ws://shadowspace.space:8888';
+      const newAddr = prompt('Enter SHADOW-IRC Server Node IP/URL for you and your friends to connect:\n(e.g. ws://shadowspace.space:8888 or ws://YOUR_SERVER_IP:8888)', current);
       if (newAddr && newAddr.trim()) {
         let formatted = newAddr.trim();
         if (!formatted.startsWith('ws://') && !formatted.startsWith('wss://')) {
