@@ -105,22 +105,22 @@ class CosmicBot {
 
       const lower = body.toLowerCase();
       if (lower.startsWith('!help') || lower.includes('hello') || lower.includes('hi')) {
-        this.say(`🚀 Hello ${senderNick}! Commands: !info, !status, !e2e <pass>, !features, !theme`);
+        this.say(`🚀 Hello ${senderNick}! Commands: !info, !status, !e2e <pass>, !features`);
       } else if (lower.startsWith('!info')) {
-        this.say(`⚡ SHADOW-IRC: RFC 1459/2812 Dual-Engine TCP (6667) & WebSockets (8080). 100% Free & Open-Source!`);
+        this.say(`⚡ SHADOW-IRC: RFC 1459/2812/IRCv3 Dual-Engine TCP (6667) & Tauri WS Bridge (8888). 100% Free MIT Software!`);
       } else if (lower.startsWith('!status')) {
-        this.say(`🟢 Network Status: Optimal | Protocol: RFC 2812 | Node.js v22 | Uptime: Live`);
+        this.say(`🟢 Network Status: Optimal | Services: Active | Bouncer: 24/7 | Uptime: Live`);
       } else if (lower.startsWith('!e2e')) {
         const key = body.split(/\s+/)[1];
         if (key) {
           this.e2eKey = key;
-          this.say(`🔒 E2EE Key set for CosmicAI: ${key}. All my messages are now AES-256-GCM encrypted!`);
+          this.say(`🔒 E2EE Key set for CosmicAI: ${key}. Messages encrypted!`);
         } else {
           this.e2eKey = null;
           this.say(`🔓 E2EE Disabled for CosmicAI.`);
         }
       } else if (lower.startsWith('!features')) {
-        this.say(`✨ Features: TrueColor ANSI TUI, Web Client, Dual Sockets, AES-256 E2EE, Flood Control, Auto-complete!`);
+        this.say(`✨ Features: Tauri v2 Desktop App, 24-bit ANSI TUI, IRC Services (NickServ/ChanServ), IRCv3 History, Anti-Forensic Purge (/nuke)!`);
       } else {
         // Echo / Conversational AI response
         this.say(`🌌 [CosmicAI] Received: "${body}". Systems nominal! Try typing !status or !features.`);
