@@ -1,22 +1,27 @@
 import net from 'net';
+import http from 'http';
 import tls from 'tls';
 import crypto from 'crypto';
+import { WebSocketServer } from 'ws';
 
 /**
- * SHADOW-IRCD: Pure Native RFC 1459/2812/IRCv3 TCP IRC Server Daemon
- * Security Hardened | Flood Protection | E2EE Passthrough | Operator Controls
+ * SHADOW-IRCD: Dual-Engine Native TCP + WebSocket IRC Server Daemon
+ * Supports:
+ *  1. Native TCP Sockets (port 6667) for Terminal CLI, HexChat, Irssi, Textual, mIRC
+ *  2. WebSockets & Embedded Cosmic Web Client (port 8080) for Windows / macOS / Mobile web browsers
  */
 
 class ShadowIRCServer {
   constructor(options = {}) {
     this.port = options.port || 6667;
+    this.webPort = options.webPort || 8080;
     this.host = options.host || '0.0.0.0';
     this.serverName = options.serverName || 'shadow.cosmos.net';
-    this.version = 'shadow-ircd-1.0.0';
+    this.version = 'shadow-ircd-2.0.0-hybrid';
     this.createdDate = new Date().toISOString();
     
     // Server State
-    this.clients = new Map(); // socket -> ClientState
+    this.clients = new Map(); // socket/ws -> ClientState
     this.nicknames = new Map(); // nickname (lowercase) -> ClientState
     this.channels = new Map(); // channelName (lowercase) -> ChannelState
     
@@ -25,7 +30,7 @@ class ShadowIRCServer {
     this.operPass = options.operPass || 'cosmicsecret';
     
     // Rate Limiting & Flood Control
-    this.maxMessageRate = 10; // max msgs per 2 seconds
+    this.maxMessageRate = 10;
     
     this.motd = [
       "==========================================================================",
@@ -35,94 +40,112 @@ class ShadowIRCServer {
       " /____/ /_____/ /_/   \\_\\_____/ /_____/\\____/_/_/  /___/  \\____/ ",
       "==========================================================================",
       "          WELCOME TO SHADOW-IRC - DEEP SPACE COSMIC NETWORK               ",
-      "             Security-Hardened | E2EE Ready | Native IRCd                 ",
+      "    Cross-Platform | Native TCP (6667) & WebSockets (8080) | E2EE Ready    ",
       "=========================================================================="
     ];
   }
 
   start() {
-    this.server = net.createServer((socket) => this.handleConnection(socket));
-
-    this.server.on('error', (err) => {
-      console.error(`[SHADOW-IRCD ERROR] ${err.message}`);
+    // 1. Native TCP Socket Server (Port 6667)
+    this.tcpServer = net.createServer((socket) => this.handleTcpConnection(socket));
+    this.tcpServer.on('error', (err) => console.error(`[TCP ERROR] ${err.message}`));
+    this.tcpServer.listen(this.port, this.host, () => {
+      console.log(`\x1b[36m[SHADOW-IRCD]\x1b[0m Native TCP Engine on \x1b[35m${this.host}:${this.port}\x1b[0m (Terminal & Desktop Apps)`);
     });
 
-    this.server.listen(this.port, this.host, () => {
-      console.log(`\x1b[36m[SHADOW-IRCD]\x1b[0m Server active on \x1b[35m${this.host}:${this.port}\x1b[0m`);
-      console.log(`\x1b[36m[SHADOW-IRCD]\x1b[0m Server Name: \x1b[32m${this.serverName}\x1b[0m`);
+    // 2. HTTP Server + WebSocket Server (Port 8080) for Windows / Mac Web Browsers
+    this.httpServer = http.createServer((req, res) => this.handleHttpRequest(req, res));
+    this.wss = new WebSocketServer({ server: this.httpServer });
+    
+    this.wss.on('connection', (ws, req) => this.handleWsConnection(ws, req));
+
+    this.httpServer.listen(this.webPort, this.host, () => {
+      console.log(`\x1b[36m[SHADOW-IRCD]\x1b[0m Web Gateway & Embedded Client on \x1b[32mhttp://${this.host}:${this.webPort}\x1b[0m (Windows/macOS/Browser)`);
     });
   }
 
-  handleConnection(socket) {
+  handleTcpConnection(socket) {
+    const client = this.createClientState(socket, socket.remoteAddress, 'TCP');
+
+    socket.on('data', (chunk) => {
+      this.processRawInput(client, chunk.toString('utf8'));
+    });
+
+    socket.on('close', () => this.handleDisconnect(client, 'Client Quit'));
+    socket.on('error', (err) => this.handleDisconnect(client, err.message));
+  }
+
+  handleWsConnection(ws, req) {
+    const ip = req.socket.remoteAddress;
+    const client = this.createClientState(ws, ip, 'WebSocket');
+
+    ws.on('message', (message) => {
+      this.processRawInput(client, message.toString('utf8'));
+    });
+
+    ws.on('close', () => this.handleDisconnect(client, 'WebSocket Disconnected'));
+    ws.on('error', (err) => this.handleDisconnect(client, err.message));
+  }
+
+  createClientState(connection, ip, type) {
     const clientId = crypto.randomUUID();
     const client = {
       id: clientId,
-      socket,
-      ip: socket.remoteAddress,
+      connection, // net.Socket or WebSocket
+      type, // 'TCP' or 'WebSocket'
+      ip,
       nickname: null,
       username: null,
       realname: null,
-      hostname: socket.remoteAddress || 'shadow.local',
+      hostname: ip || 'shadow.local',
       registered: false,
-      channels: new Set(), // Set of channel lowercase names
+      channels: new Set(),
       isOper: false,
       msgCount: 0,
       lastMsgReset: Date.now(),
       buffer: ''
     };
 
-    this.clients.set(socket, client);
-    console.log(`[CONNECT] New peer from ${client.ip}`);
+    this.clients.set(connection, client);
+    console.log(`[CONNECT] New ${type} peer from ${ip}`);
+    return client;
+  }
 
-    socket.on('data', (chunk) => {
-      // Check flood rate limit
-      const now = Date.now();
-      if (now - client.lastMsgReset > 2000) {
-        client.msgCount = 0;
-        client.lastMsgReset = now;
+  processRawInput(client, rawData) {
+    const now = Date.now();
+    if (now - client.lastMsgReset > 2000) {
+      client.msgCount = 0;
+      client.lastMsgReset = now;
+    }
+    client.msgCount++;
+    if (client.msgCount > this.maxMessageRate) {
+      this.send(client, `:${this.serverName} 465 ${client.nickname || '*'} :Flood control triggered. Slow down.`);
+      return;
+    }
+
+    client.buffer += rawData;
+    if (client.buffer.length > 65536) {
+      this.closeClient(client);
+      return;
+    }
+
+    let lines = client.buffer.split(/\r?\n/);
+    client.buffer = lines.pop();
+
+    for (let line of lines) {
+      line = line.trim();
+      if (line.length > 0) {
+        if (line.length > 512) line = line.substring(0, 512);
+        this.parseAndExecute(client, line);
       }
-      client.msgCount++;
-      if (client.msgCount > this.maxMessageRate) {
-        this.send(client, `:${this.serverName} 465 ${client.nickname || '*'} :Flood control triggered. Slow down.`);
-        return;
-      }
-
-      client.buffer += chunk.toString('utf8');
-      
-      // Prevent buffer memory exhaustion attack
-      if (client.buffer.length > 65536) {
-        socket.destroy();
-        return;
-      }
-
-      let lines = client.buffer.split(/\r?\n/);
-      client.buffer = lines.pop(); // Keep uncompleted line
-
-      for (let line of lines) {
-        line = line.trim();
-        if (line.length > 0) {
-          // Truncate to RFC 512 byte limit to prevent injection
-          if (line.length > 512) line = line.substring(0, 512);
-          this.parseAndExecute(client, line);
-        }
-      }
-    });
-
-    socket.on('close', () => {
-      this.handleDisconnect(client, 'Client Quit');
-    });
-
-    socket.on('error', (err) => {
-      this.handleDisconnect(client, err.message);
-    });
+    }
   }
 
   handleDisconnect(client, reason) {
-    if (!this.clients.has(client.socket)) return;
+    if (!this.clients.has(client.connection)) return;
     
-    console.log(`[DISCONNECT] ${client.nickname || client.ip} (${reason})`);
+    console.log(`[DISCONNECT] ${client.nickname || client.ip} (${client.type}) - ${reason}`);
     
-    // Leave all channels
     for (const channelName of client.channels) {
       const channel = this.channels.get(channelName);
       if (channel) {
@@ -130,7 +153,6 @@ class ShadowIRCServer {
         channel.ops.delete(client);
         channel.voice.delete(client);
         
-        // Notify remaining channel members
         this.broadcastChannel(channel, `:${client.nickname}!${client.username}@${client.hostname} QUIT :${reason}`);
         
         if (channel.members.size === 0) {
@@ -142,12 +164,18 @@ class ShadowIRCServer {
     if (client.nickname) {
       this.nicknames.delete(client.nickname.toLowerCase());
     }
-    this.clients.delete(client.socket);
+    this.clients.delete(client.connection);
+  }
+
+  closeClient(client) {
+    if (client.type === 'TCP') {
+      client.connection.destroy();
+    } else if (client.type === 'WebSocket') {
+      client.connection.close();
+    }
   }
 
   parseAndExecute(client, rawLine) {
-    // Linear parsing safe from ReDoS
-    let prefix = '';
     let trailing = '';
     let line = rawLine;
 
@@ -161,7 +189,7 @@ class ShadowIRCServer {
     if (parts.length === 0) return;
 
     if (parts[0].startsWith(':')) {
-      prefix = parts.shift().substring(1);
+      parts.shift();
     }
 
     const command = parts.shift().toUpperCase();
@@ -183,7 +211,6 @@ class ShadowIRCServer {
         this.send(client, `:${this.serverName} PONG ${this.serverName} :${args[0] || ''}`);
         break;
       case 'PONG':
-        // Heartbeat ACK
         break;
       case 'JOIN':
         this.handleJoin(client, args[0], args[1]);
@@ -220,7 +247,7 @@ class ShadowIRCServer {
         break;
       case 'QUIT':
         this.send(client, `ERROR :Closing Link: ${client.hostname} (${args[0] || 'Quit'})`);
-        client.socket.end();
+        this.closeClient(client);
         break;
       default:
         if (client.registered) {
@@ -236,7 +263,6 @@ class ShadowIRCServer {
       return;
     }
 
-    // Validate nickname syntax
     if (!/^[a-zA-Z0-9_\-\[\]\\`^{}|]{1,30}$/.test(nick)) {
       this.send(client, `:${this.serverName} 432 * ${nick} :Erroneous nickname`);
       return;
@@ -261,7 +287,6 @@ class ShadowIRCServer {
     if (oldNick) {
       const nickChangeMsg = `:${oldNick}!${client.username}@${client.hostname} NICK :${nick}`;
       this.send(client, nickChangeMsg);
-      // Notify all users in shared channels
       const notified = new Set([client]);
       for (const chanName of client.channels) {
         const chan = this.channels.get(chanName);
@@ -298,13 +323,11 @@ class ShadowIRCServer {
     if (!client.registered && client.nickname && client.username) {
       client.registered = true;
       
-      // Welcome RPL_WELCOME (001)
       this.send(client, `:${this.serverName} 001 ${client.nickname} :Welcome to the Shadow IRC Cosmic Network ${client.nickname}!${client.username}@${client.hostname}`);
       this.send(client, `:${this.serverName} 002 ${client.nickname} :Your host is ${this.serverName}, running version ${this.version}`);
       this.send(client, `:${this.serverName} 003 ${client.nickname} :This server was created ${this.createdDate}`);
       this.send(client, `:${this.serverName} 004 ${client.nickname} ${this.serverName} ${this.version} o v m i k t n s`);
 
-      // MOTD RPL_MOTDSTART (375) / RPL_MOTD (372) / RPL_ENDOFMOTD (376)
       this.send(client, `:${this.serverName} 375 ${client.nickname} :- ${this.serverName} Message of the day - `);
       for (const line of this.motd) {
         this.send(client, `:${this.serverName} 372 ${client.nickname} :- ${line}`);
@@ -339,16 +362,14 @@ class ShadowIRCServer {
           topicSetBy: 'System',
           topicSetAt: Math.floor(Date.now() / 1000),
           key: null,
-          modes: new Set(['n', 't']), // default modes
+          modes: new Set(['n', 't']),
           members: new Set(),
           ops: new Set(),
           voice: new Set(),
         };
-        this.channels.get = this.channels.get.bind(this.channels);
         this.channels.set(chanLower, channel);
       }
 
-      // Check key mode
       if (channel.modes.has('k') && channel.key && channel.key !== key && !isFirst) {
         this.send(client, `:${this.serverName} 475 ${client.nickname} ${name} :Cannot join channel (+k) - bad key`);
         continue;
@@ -364,10 +385,7 @@ class ShadowIRCServer {
       const joinMsg = `:${client.nickname}!${client.username}@${client.hostname} JOIN :${name}`;
       this.broadcastChannel(channel, joinMsg);
 
-      // RPL_TOPIC (332)
       this.send(client, `:${this.serverName} 332 ${client.nickname} ${name} :${channel.topic}`);
-      
-      // RPL_NAMREPLY (353)
       this.sendNamesReply(client, channel);
     }
   }
@@ -424,7 +442,6 @@ class ShadowIRCServer {
     const msgFormatted = `:${client.nickname}!${client.username}@${client.hostname} ${type} ${target} :${message}`;
 
     if (target.startsWith('#') || target.startsWith('&')) {
-      // Channel message
       const chanLower = target.toLowerCase();
       const channel = this.channels.get(chanLower);
       if (!channel) {
@@ -438,7 +455,6 @@ class ShadowIRCServer {
 
       this.broadcastChannel(channel, msgFormatted, client);
     } else {
-      // Direct Message to Nickname
       const targetClient = this.nicknames.get(target.toLowerCase());
       if (targetClient) {
         this.send(targetClient, msgFormatted);
@@ -461,7 +477,6 @@ class ShadowIRCServer {
     }
 
     if (newTopic !== undefined) {
-      // Set Topic
       if (channel.modes.has('t') && !channel.ops.has(client) && !client.isOper) {
         this.send(client, `:${this.serverName} 482 ${client.nickname} ${channel.name} :You're not channel operator (+t mode set)`);
         return;
@@ -472,7 +487,6 @@ class ShadowIRCServer {
 
       this.broadcastChannel(channel, `:${client.nickname}!${client.username}@${client.hostname} TOPIC ${channel.name} :${newTopic}`);
     } else {
-      // View Topic
       this.send(client, `:${this.serverName} 332 ${client.nickname} ${channel.name} :${channel.topic}`);
       this.send(client, `:${this.serverName} 333 ${client.nickname} ${channel.name} ${channel.topicSetBy} ${channel.topicSetAt}`);
     }
@@ -490,7 +504,6 @@ class ShadowIRCServer {
       }
 
       if (!modeFlags) {
-        // Query channel modes
         this.send(client, `:${this.serverName} 324 ${client.nickname} ${channel.name} +${Array.from(channel.modes).join('')}`);
         return;
       }
@@ -500,7 +513,6 @@ class ShadowIRCServer {
         return;
       }
 
-      // Apply mode changes (e.g. +o nick, -o nick, +v nick, -v nick)
       let adding = true;
       for (let i = 0; i < modeFlags.length; i++) {
         const char = modeFlags[i];
@@ -622,17 +634,148 @@ class ShadowIRCServer {
 
   send(client, message) {
     try {
-      client.socket.write(message + '\r\n');
+      if (client.type === 'TCP') {
+        client.connection.write(message + '\r\n');
+      } else if (client.type === 'WebSocket') {
+        if (client.connection.readyState === 1) { // OPEN
+          client.connection.send(message + '\r\n');
+        }
+      }
     } catch (err) {
-      // Socket error handling
+      // Handle socket error
     }
+  }
+
+  handleHttpRequest(req, res) {
+    // Serve zero-dependency Web Client for Windows / macOS browsers
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🌌 SHADOW // IRC [Cosmic Cyber Network]</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', monospace; }
+    body { background: #030308; color: #00f3ff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    canvas { position: absolute; top:0; left:0; width:100%; height:100%; z-index: -1; }
+    header { background: rgba(7,7,18,0.85); padding: 12px; border-bottom: 1px solid #8a2be2; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 18px; color: #ff007f; text-shadow: 0 0 10px #ff007f; }
+    #main { display: flex; flex: 1; height: calc(100vh - 100px); }
+    #chat { flex: 1; background: rgba(3,3,8,0.7); padding: 15px; overflow-y: auto; border-right: 1px solid #1d1d3d; }
+    #users { width: 200px; background: rgba(7,7,18,0.85); padding: 15px; border-left: 1px solid #8a2be2; }
+    .msg { margin-bottom: 8px; line-height: 1.4; word-break: break-word; }
+    .time { color: #64748b; font-size: 12px; }
+    .nick { color: #00f3ff; font-weight: bold; }
+    .system { color: #ffaa00; }
+    .op { color: #ff007f; }
+    #input-bar { background: rgba(7,7,18,0.9); padding: 12px; border-top: 1px solid #00f3ff; display: flex; }
+    input { flex: 1; background: #070712; border: 1px solid #8a2be2; color: #00ff41; padding: 10px; outline: none; font-size: 14px; }
+    button { background: #8a2be2; color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #ff007f; }
+  </style>
+</head>
+<body>
+  <canvas id="space"></canvas>
+  <header>
+    <h1>🌌 SHADOW // IRC [Cosmic Web Client]</h1>
+    <span id="status">Status: Connecting...</span>
+  </header>
+  <div id="main">
+    <div id="chat"></div>
+    <div id="users">
+      <h3 style="color:#ff007f; margin-bottom:10px;">USERS</h3>
+      <ul id="user-list" style="list-style:none;"></ul>
+    </div>
+  </div>
+  <div id="input-bar">
+    <input type="text" id="prompt" placeholder="Type /join #cosmos or message..." autofocus />
+    <button onclick="sendMsg()">SEND</button>
+  </div>
+
+  <script>
+    // Canvas Space Particle Animation
+    const canvas = document.getElementById('space');
+    const ctx = canvas.getContext('2d');
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.onresize = resize; resize();
+    const stars = Array.from({length: 150}, () => ({
+      x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2, color: ['#00f3ff','#ff007f','#8a2be2','#00ff66'][Math.floor(Math.random()*4)]
+    }));
+    function drawStars() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      stars.forEach(s => {
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fillStyle = s.color; ctx.shadowBlur = 8; ctx.shadowColor = s.color; ctx.fill();
+        s.y += 0.2; if (s.y > canvas.height) s.y = 0;
+      });
+      requestAnimationFrame(drawStars);
+    }
+    drawStars();
+
+    // WebSocket IRC Engine
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(protocol + '//' + location.host);
+    const chat = document.getElementById('chat');
+    const status = document.getElementById('status');
+    const userList = document.getElementById('user-list');
+    const prompt = document.getElementById('prompt');
+    let myNick = 'web_user_' + Math.floor(Math.random()*8999+1000);
+
+    ws.onopen = () => {
+      status.innerText = 'Connected as ' + myNick;
+      ws.send('NICK ' + myNick + '\\r\\n');
+      ws.send('USER ' + myNick + ' 0 * :Shadow Web User\\r\\n');
+      ws.send('JOIN #cosmos\\r\\n');
+    };
+
+    ws.onmessage = (e) => {
+      const line = e.data.trim();
+      const div = document.createElement('div');
+      div.className = 'msg';
+      const time = new Date().toLocaleTimeString();
+      div.innerHTML = '<span class="time">[' + time + ']</span> ' + escapeHtml(line);
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+
+      if (line.includes(' 353 ')) {
+        const parts = line.split(' :');
+        if (parts[1]) {
+          userList.innerHTML = parts[1].split(' ').map(u => '<li class="' + (u.startsWith('@')?'op':'nick') + '">' + escapeHtml(u) + '</li>').join('');
+        }
+      }
+    };
+
+    function sendMsg() {
+      const text = prompt.value.trim();
+      if (!text) return;
+      prompt.value = '';
+      if (text.startsWith('/')) {
+        ws.send(text.substring(1) + '\\r\\n');
+      } else {
+        ws.send('PRIVMSG #cosmos :' + text + '\\r\\n');
+        const div = document.createElement('div');
+        div.className = 'msg';
+        div.innerHTML = '<span class="time">[' + new Date().toLocaleTimeString() + ']</span> <span class="op">&lt;' + myNick + '&gt;</span> ' + escapeHtml(text);
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    prompt.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMsg(); });
+    function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  </script>
+</body>
+</html>`;
+
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(html);
   }
 }
 
 // Auto-instantiate if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = process.env.PORT || 6667;
-  const server = new ShadowIRCServer({ port });
+  const webPort = process.env.WEB_PORT || 8080;
+  const server = new ShadowIRCServer({ port, webPort });
   server.start();
 }
 

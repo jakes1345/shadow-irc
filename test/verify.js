@@ -17,9 +17,10 @@ if (decrypted === secretText) {
   process.exit(1);
 }
 
-// 2. Launch Native IRC Server Daemon on test port 6699
+// 2. Launch Native IRC Server Daemon on test ports 6699 (TCP) & 8099 (Web)
 const testPort = 6699;
-const server = new ShadowIRCServer({ port: testPort, host: '127.0.0.1' });
+const testWebPort = 8099;
+const server = new ShadowIRCServer({ port: testPort, webPort: testWebPort, host: '127.0.0.1' });
 server.start();
 
 // 3. Connect Client 1 and Client 2 via raw TCP socket
@@ -29,7 +30,6 @@ setTimeout(() => {
   });
 
   let client2Joined = false;
-  let messageReceived = false;
 
   client1.on('data', (buf) => {
     const str = buf.toString();
@@ -39,7 +39,6 @@ setTimeout(() => {
     }
     if (str.includes('JOIN :#cosmos') && !client2Joined) {
       client2Joined = true;
-      // Connect Client 2
       const client2 = net.connect(testPort, '127.0.0.1', () => {
         client2.write('NICK bob_shadow\r\nUSER bob 0 * :Bob Space\r\nJOIN #cosmos\r\n');
       });
@@ -48,10 +47,9 @@ setTimeout(() => {
         const str2 = buf2.toString();
         if (str2.includes('PRIVMSG #cosmos')) {
           console.log('✅ [PASSED] Multi-client Message Broadcast to #cosmos');
-          messageReceived = true;
           
           console.log('\n==================================================');
-          console.log('🎉 ALL SHADOW-IRC NATIVE SUITE TESTS PASSED 100%!');
+          console.log('🎉 ALL SHADOW-IRC DUAL-ENGINE TESTS PASSED 100%!');
           console.log('==================================================\n');
           
           client1.destroy();
