@@ -29,8 +29,9 @@ export class IRCServicesEngine {
     }
   }
 
-  hashPassword(password, salt = 'SHADOW_SERVICES_SALT_2026') {
-    return crypto.pbkdf2Sync(password, salt, 50000, 32, 'sha256').toString('hex');
+  hashPassword(password, salt) {
+    const s = salt || 'SHADOW_SERVICES_SALT_2026';
+    return crypto.pbkdf2Sync(password, s, 50000, 32, 'sha256').toString('hex');
   }
 
   loadDB() {
@@ -50,10 +51,9 @@ export class IRCServicesEngine {
         if (parsed.vhosts) {
           for (const [k, v] of Object.entries(parsed.vhosts)) this.vhosts.set(k, v);
         }
-        console.log(`[SERVICES] Loaded ${this.accounts.size} accounts, ${this.channels.size} registered channels.`);
       }
     } catch (err) {
-      console.error(`[SERVICES ERROR] DB load failed: ${err.message}`);
+      // Anonymized silent error
     }
   }
 
@@ -67,7 +67,28 @@ export class IRCServicesEngine {
       };
       fs.writeFileSync(this.dbFile, JSON.stringify(payload, null, 2), 'utf8');
     } catch (err) {
-      console.error(`[SERVICES ERROR] DB save failed: ${err.message}`);
+      // Anonymized silent error
+    }
+  }
+
+  nukeDatabaseFile() {
+    this.accounts.clear();
+    this.channels.clear();
+    this.memos.clear();
+    this.vhosts.clear();
+
+    try {
+      if (fs.existsSync(this.dbFile)) {
+        const stats = fs.statSync(this.dbFile);
+        if (stats.size > 0) {
+          const junk = crypto.randomBytes(stats.size);
+          fs.writeFileSync(this.dbFile, junk);
+          fs.writeFileSync(this.dbFile, Buffer.alloc(stats.size, 0));
+        }
+        fs.unlinkSync(this.dbFile);
+      }
+    } catch (err) {
+      // Anti-forensic purge fail-safe
     }
   }
 
@@ -80,14 +101,13 @@ export class IRCServicesEngine {
     switch (sub) {
       case 'REGISTER': {
         const password = args[0];
-        const email = args[1] || 'user@shadow.net';
 
         if (!client.nickname) {
           sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname || '*'} :You must have a nickname to register.`);
           return;
         }
         if (!password) {
-          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: REGISTER <password> [email]`);
+          sendFunc(`:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :Syntax: REGISTER <password>`);
           return;
         }
 
@@ -97,11 +117,12 @@ export class IRCServicesEngine {
           return;
         }
 
-        const passHash = this.hashPassword(password);
+        const salt = crypto.randomBytes(16).toString('hex');
+        const passHash = this.hashPassword(password, salt);
         const account = {
           nickname: client.nickname,
+          salt,
           passHash,
-          email,
           registeredAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString()
         };
@@ -129,8 +150,9 @@ export class IRCServicesEngine {
           return;
         }
 
-        const passHash = this.hashPassword(password);
-        if (passHash === account.passHash) {
+        const salt = account.salt || 'SHADOW_SERVICES_SALT_2026';
+        const inputHash = this.hashPassword(password, salt);
+        if (inputHash === account.passHash) {
           client.account = nickLower;
           client.identified = true;
           account.lastLoginAt = new Date().toISOString();

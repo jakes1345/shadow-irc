@@ -36,6 +36,17 @@ export class IRCv3HistoryEngine {
     const history = this.channelHistory.get(chanLower) || [];
     return history.slice(-count);
   }
+
+  clearAllHistory() {
+    for (const [key, history] of this.channelHistory.entries()) {
+      for (const item of history) {
+        item.message = '';
+        item.senderNick = '';
+      }
+      history.length = 0;
+    }
+    this.channelHistory.clear();
+  }
 }
 
 export class IRCv3CapNegotiator {

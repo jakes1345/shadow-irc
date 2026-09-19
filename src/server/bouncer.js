@@ -29,13 +29,24 @@ export class BouncerEngine {
     };
 
     this.detachedSessions.set(nickLower, session);
-    console.log(`[BOUNCER] Session for ${client.nickname} detached & persisted.`);
     return true;
   }
 
   isDetached(nickname) {
     if (!nickname) return false;
     return this.detachedSessions.has(nickname.toLowerCase());
+  }
+
+  clearAllBouncerData() {
+    for (const session of this.detachedSessions.values()) {
+      if (session.offlineBuffer) {
+        for (const item of session.offlineBuffer) {
+          item.line = '';
+        }
+        session.offlineBuffer.length = 0;
+      }
+    }
+    this.detachedSessions.clear();
   }
 
   bufferMessage(targetNick, messageLine) {
@@ -56,8 +67,6 @@ export class BouncerEngine {
     const nickLower = client.nickname.toLowerCase();
     const session = this.detachedSessions.get(nickLower);
     if (!session) return null;
-
-    console.log(`[BOUNCER] Reattaching session for ${client.nickname}...`);
 
     // Restore channels
     client.channels = new Set(session.channels);

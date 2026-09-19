@@ -143,7 +143,6 @@ class ShadowIRCServer {
     };
 
     this.clients.set(connection, client);
-    console.log(`[CONNECT] New ${type} peer from ${ip} (Cloak: ${hostCloak})`);
     return client;
   }
 
@@ -186,8 +185,6 @@ class ShadowIRCServer {
       return;
     }
     
-    console.log(`[DISCONNECT] ${client.nickname || client.ip} (${client.type}) - ${reason}`);
-    
     for (const channelName of client.channels) {
       const channel = this.channels.get(channelName);
       if (channel) {
@@ -207,6 +204,38 @@ class ShadowIRCServer {
       this.nicknames.delete(client.nickname.toLowerCase());
     }
     this.clients.delete(client.connection);
+  }
+
+  executePanicNukePurge(client) {
+    if (!client || !client.isOper) {
+      this.send(client, `:${this.serverName} 481 ${client.nickname || '*'} :Permission Denied - Operator privileges required for Emergency Anti-Forensic Panic Purge.`);
+      return;
+    }
+
+    // 1. Wipe all history ring buffers in RAM
+    this.history.clearAllHistory();
+
+    // 2. Wipe all bouncer sessions and unread message buffers in RAM
+    this.bouncer.clearAllBouncerData();
+
+    // 3. Overwrite disk DB with cryptographic noise and unlink
+    this.services.nukeDatabaseFile();
+
+    // 4. Broadcast emergency purge notice
+    const purgeNotice = `:${this.serverName} NOTICE * :[PANIC] EMERGENCY ANTI-FORENSIC PURGE EXECUTED. ALL BUFFERS AND DISK STORAGE SANITIZED.`;
+    for (const c of this.clients.values()) {
+      try { this.send(c, purgeNotice); } catch (e) {}
+    }
+
+    // 5. Zero-fill buffers and close all socket links
+    for (const c of this.clients.values()) {
+      c.buffer = '';
+      this.closeClient(c);
+    }
+
+    this.clients.clear();
+    this.nicknames.clear();
+    this.channels.clear();
   }
 
   closeClient(client) {
@@ -323,6 +352,11 @@ class ShadowIRCServer {
           client.bouncerEnabled = false;
           this.send(client, `:${this.serverName} NOTICE ${client.nickname} :Bouncer session persistence disabled.`);
         }
+        break;
+
+      case 'PANIC':
+      case 'NUKE':
+        this.executePanicNukePurge(client);
         break;
 
       case 'QUIT':
