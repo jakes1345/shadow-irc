@@ -609,7 +609,7 @@ class ShadowIRCClient {
         break;
       }
       case 'NOTICE': {
-        const formatted = `{#64748b-fg}[${time}]{/#64748b-fg} {bold}{#ffaa00-fg}-${senderNick}-${/#ffaa00-fg}{/bold} ${args[1] || ''}`;
+        const formatted = `{#64748b-fg}[${time}]{/#64748b-fg} {bold}{#ffaa00-fg}-${senderNick}-{/#ffaa00-fg}{/bold} ${args[1] || ''}`;
         this.logMessage(this.currentWindow, formatted);
         break;
       }
