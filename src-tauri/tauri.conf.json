@@ -1,0 +1,48 @@
+{
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devPath": "../src-desktop",
+    "distDir": "../src-desktop"
+  },
+  "package": {
+    "productName": "SHADOW // IRC",
+    "version": "4.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "bundle": {
+      "active": true,
+      "category": "SocialNetworking",
+      "copyright": "MIT License 2026",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "icons/icon.png"
+      ],
+      "identifier": "com.shadow.irc",
+      "longDescription": "SHADOW-IRC Native Deep Space Cosmos IRC Desktop Application",
+      "resources": [],
+      "shortDescription": "SHADOW-IRC Cosmic Desktop Client",
+      "targets": "all"
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 720,
+        "resizable": true,
+        "title": "SHADOW // IRC [Deep Space Network]",
+        "width": 1100,
+        "decorations": true,
+        "transparent": false
+      }
+    ]
+  }
+}

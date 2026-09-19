@@ -1,7 +1,7 @@
 {
   "name": "shadow-irc",
-  "version": "2.0.0",
-  "description": "SHADOW-IRC: Dual-Engine Native TCP (6667) & WebSocket/Web (8080) Cosmic Cyber IRC Platform.",
+  "version": "4.0.0",
+  "description": "SHADOW-IRC: Native Tauri Desktop App (Linux, Windows, macOS) & Terminal TUI Suite with Deep Space Nebula Aesthetics.",
   "main": "src/server/ircd.js",
   "type": "module",
   "bin": {
@@ -11,27 +11,32 @@
   "scripts": {
     "server": "node src/server/ircd.js",
     "client": "node src/client/tui.js",
+    "desktop": "tauri dev",
+    "build:desktop": "tauri build",
     "start": "node src/server/ircd.js"
   },
   "keywords": [
     "irc",
     "ircd",
     "tui",
-    "terminal-irc",
+    "tauri",
+    "desktop-app",
     "space-theme",
-    "cyberpunk",
-    "hacker-ui",
     "nebula",
+    "cosmos",
     "e2ee",
     "tcp-sockets",
-    "websockets",
     "rfc1459",
     "rfc2812"
   ],
   "author": "Antigravity",
   "license": "MIT",
   "dependencies": {
+    "@tauri-apps/api": "^1.6.0",
     "neo-blessed": "^0.2.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.6.0"
   }
 }

@@ -10,10 +10,15 @@ import { BouncerEngine } from './bouncer.js';
 import { BanEngine } from './banEngine.js';
 
 /**
- * SHADOW-IRCD v3.0: Dual-Engine Enterprise IRC Server Daemon
+ * SHADOW-IRCD v4.0: Deep Space Cosmic Nebula IRC Server Daemon
  * Features:
  *  - Native TCP Sockets (6667) & WebSockets / Web Client (8888)
- *  - Full Built-in IRC Services (NickServ, ChanServ, MemoServ, HostServ)
+ *  - Deep Space Nebula Cosmos Theme (Zero Cyberpunk Text)
+ *  - CTCP Subsystem (VERSION, TIME, PING, ACTION /me) & DCC Signal Relay
+ *  - IP Hash Cloaking (user@cosmos/shadow/x-hash)
+ *  - Channel Modes +m (Moderated), +i (Invite Only) & /invite
+ *  - OperServ Wallops Network Broadcast (/wallops)
+ *  - Built-in Services (NickServ, ChanServ, MemoServ, HostServ)
  *  - IRCv3 Specification Suite (server-time, echo-message, chathistory, sasl)
  *  - Ring Buffer History Engine (500 items per channel with scrollback replay)
  *  - ZNC-style 24/7 Bouncer Session Persistence
@@ -26,7 +31,7 @@ class ShadowIRCServer {
     this.webPort = options.webPort || 8888;
     this.host = options.host || '0.0.0.0';
     this.serverName = options.serverName || 'shadow.cosmos.net';
-    this.version = 'shadow-ircd-3.0.0-enterprise';
+    this.version = 'shadow-ircd-4.0.0-cosmic-space';
     this.createdDate = new Date().toISOString();
     
     // Server State
@@ -53,8 +58,9 @@ class ShadowIRCServer {
       "  \\___ \\ / /_/ / / /_\\ \\/  //  / / /_/ / /_/ / / /  _/  _/  / /_ ",
       " /____/ /_____/ /_/   \\_\\_____/ /_____/\\____/_/_/  /___/  \\____/ ",
       "==========================================================================",
-      "          WELCOME TO SHADOW-IRC v3.0 ENTERPRISE COSMIC NETWORK            ",
-      " Services: NickServ | ChanServ | MemoServ | HostServ | Bouncer | IRCv3    ",
+      "       WELCOME TO SHADOW-IRC v4.0 - DEEP SPACE COSMOS NETWORK             ",
+      " Quantum Void | Nebula Particles | Event Horizon E2EE | IP Cloaked         ",
+      " Services: NickServ | ChanServ | MemoServ | HostServ | Bouncer | CTCP    ",
       "=========================================================================="
     ];
   }
@@ -64,7 +70,7 @@ class ShadowIRCServer {
     this.tcpServer = net.createServer((socket) => this.handleTcpConnection(socket));
     this.tcpServer.on('error', (err) => console.error(`[TCP ERROR] ${err.message}`));
     this.tcpServer.listen(this.port, this.host, () => {
-      console.log(`\x1b[36m[SHADOW-IRCD v3.0]\x1b[0m Native TCP Engine on \x1b[35m${this.host}:${this.port}\x1b[0m`);
+      console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Native TCP Space Engine on \x1b[35m${this.host}:${this.port}\x1b[0m`);
     });
 
     // 2. HTTP Server + WebSocket Server (Port 8888) for Web Browsers
@@ -74,7 +80,7 @@ class ShadowIRCServer {
     this.wss.on('connection', (ws, req) => this.handleWsConnection(ws, req));
 
     this.httpServer.listen(this.webPort, this.host, () => {
-      console.log(`\x1b[36m[SHADOW-IRCD v3.0]\x1b[0m Web Gateway & Embedded Client on \x1b[32mhttp://${this.host}:${this.webPort}\x1b[0m`);
+      console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Cosmic Web Gateway on \x1b[32mhttp://${this.host}:${this.webPort}\x1b[0m`);
     });
   }
 
@@ -103,6 +109,11 @@ class ShadowIRCServer {
 
   createClientState(connection, ip, type) {
     const clientId = crypto.randomUUID();
+
+    // Generate automatic IP Hash Cloak (user@cosmos/shadow/x-hash)
+    const ipHash = crypto.createHash('sha256').update(ip || '127.0.0.1').digest('hex').substring(0, 10);
+    const hostCloak = `cosmos/shadow/x-${ipHash}`;
+
     const client = {
       id: clientId,
       connection,
@@ -111,11 +122,12 @@ class ShadowIRCServer {
       nickname: null,
       username: null,
       realname: null,
-      hostname: ip || 'shadow.local',
+      hostname: hostCloak,
       registered: false,
       account: null,
       identified: false,
       channels: new Set(),
+      invitedChannels: new Set(),
       isOper: false,
       bouncerEnabled: false,
       enabledCaps: new Set(['server-time']),
@@ -125,7 +137,7 @@ class ShadowIRCServer {
     };
 
     this.clients.set(connection, client);
-    console.log(`[CONNECT] New ${type} peer from ${ip}`);
+    console.log(`[CONNECT] New ${type} peer from ${ip} (Cloak: ${hostCloak})`);
     return client;
   }
 
@@ -162,7 +174,6 @@ class ShadowIRCServer {
   handleDisconnect(client, reason) {
     if (!this.clients.has(client.connection)) return;
 
-    // Check if client has Bouncer enabled
     if (client.bouncerEnabled && client.account) {
       this.bouncer.detachSession(client, reason);
       this.clients.delete(client.connection);
@@ -258,6 +269,9 @@ class ShadowIRCServer {
       case 'MODE':
         this.handleMode(client, args[0], args[1], args[2]);
         break;
+      case 'INVITE':
+        this.handleInvite(client, args[0], args[1]);
+        break;
       case 'WHOIS':
         this.handleWhois(client, args[0]);
         break;
@@ -270,11 +284,15 @@ class ShadowIRCServer {
       case 'OPER':
         this.handleOper(client, args[0], args[1]);
         break;
+      case 'WALLOPS':
+      case 'OPERWALL':
+        this.handleWallops(client, args[0] || args.join(' '));
+        break;
       case 'KICK':
         this.handleKick(client, args[0], args[1], args[2]);
         break;
 
-      // Service Command Shortcuts
+      // Service Shortcuts
       case 'NS':
       case 'NICKSERV':
         this.services.handleNickServ(client, args[0], args.slice(1), (msg) => this.send(client, msg), this);
@@ -390,7 +408,6 @@ class ShadowIRCServer {
       }
       this.send(client, `:${this.serverName} 376 ${client.nickname} :End of MOTD command`);
 
-      // Check if NickServ registered account
       if (this.services.accounts.has(client.nickname.toLowerCase())) {
         this.send(client, `:NickServ!Services@shadow.cosmos.net NOTICE ${client.nickname} :This nickname is registered. Please identify with /msg NickServ IDENTIFY <password>`);
       }
@@ -438,6 +455,12 @@ class ShadowIRCServer {
         continue;
       }
 
+      // Check Invite-Only Mode (+i)
+      if (channel.modes.has('i') && !client.invitedChannels.has(chanLower) && !isFirst && !client.isOper) {
+        this.send(client, `:${this.serverName} 473 ${client.nickname} ${name} :Cannot join channel (+i) - invite only`);
+        continue;
+      }
+
       if (channel.modes.has('k') && channel.key && channel.key !== key && !isFirst) {
         this.send(client, `:${this.serverName} 475 ${client.nickname} ${name} :Cannot join channel (+k) - bad key`);
         continue;
@@ -446,7 +469,6 @@ class ShadowIRCServer {
       channel.members.add(client);
       client.channels.add(chanLower);
 
-      // Auto Op founder or first member
       const chanReg = this.services.channels.get(chanLower);
       if (isFirst || client.isOper || (chanReg && chanReg.founder === client.account)) {
         channel.ops.add(client);
@@ -518,7 +540,22 @@ class ShadowIRCServer {
       return;
     }
 
-    // Check routing to Services (NickServ, ChanServ, MemoServ, HostServ)
+    // Handle CTCP requests (e.g. \x01VERSION\x01, \x01TIME\x01, \x01PING 123\x01)
+    if (message.startsWith('\x01') && message.endsWith('\x01')) {
+      const ctcpCmd = message.substring(1, message.length - 1).trim();
+      if (ctcpCmd.startsWith('VERSION')) {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :\x01VERSION ${this.version}\x01`);
+        return;
+      } else if (ctcpCmd.startsWith('TIME')) {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :\x01TIME ${new Date().toUTCString()}\x01`);
+        return;
+      } else if (ctcpCmd.startsWith('PING')) {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :\x01${ctcpCmd}\x01`);
+        return;
+      }
+    }
+
+    // Routing to Services
     if (['nickserv', 'chanserv', 'memoserv', 'hostserv'].includes(target.toLowerCase())) {
       this.services.routeServiceMsg(client, target, message, (msg) => this.send(client, msg), this);
       return;
@@ -534,18 +571,21 @@ class ShadowIRCServer {
         if (!isNotice) this.send(client, `:${this.serverName} 404 ${client.nickname} ${target} :Cannot send to channel (Channel does not exist)`);
         return;
       }
+
+      // Check Moderated Mode (+m)
+      if (channel.modes.has('m') && !channel.ops.has(client) && !channel.voice.has(client) && !client.isOper) {
+        if (!isNotice) this.send(client, `:${this.serverName} 404 ${client.nickname} ${target} :Cannot send to channel (+m moderated - Ops/Voice only)`);
+        return;
+      }
+
       if (channel.modes.has('n') && !channel.members.has(client)) {
         if (!isNotice) this.send(client, `:${this.serverName} 404 ${client.nickname} ${target} :Cannot send to channel (+n external messages blocked)`);
         return;
       }
 
-      // Add to Ring Buffer History
       this.history.addMessage(target, client.nickname, message, isNotice);
-
-      // Broadcast to online channel members
       this.broadcastChannel(channel, msgFormatted, client);
 
-      // Echo message capability for multi-device sync
       if (client.enabledCaps && client.enabledCaps.has('echo-message')) {
         this.send(client, msgFormatted);
       }
@@ -554,11 +594,44 @@ class ShadowIRCServer {
       if (targetClient) {
         this.send(targetClient, msgFormatted);
       } else if (this.bouncer.isDetached(target)) {
-        // Target is detached in Bouncer mode
         this.bouncer.bufferMessage(target, msgFormatted);
-        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${target} is currently offline (Bouncer active - memo buffered).`);
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${target} is currently offline (Bouncer active - message buffered).`);
       } else {
         if (!isNotice) this.send(client, `:${this.serverName} 401 ${client.nickname} ${target} :No such nick/channel`);
+      }
+    }
+  }
+
+  handleInvite(client, targetNick, chanName) {
+    if (!this.requireAuth(client)) return;
+    if (!targetNick || !chanName) return;
+
+    const chanLower = chanName.toLowerCase();
+    const channel = this.channels.get(chanLower);
+    if (!channel) return;
+
+    if (!channel.ops.has(client) && !client.isOper) {
+      this.send(client, `:${this.serverName} 482 ${client.nickname} ${channel.name} :You're not channel operator`);
+      return;
+    }
+
+    const targetClient = this.nicknames.get(targetNick.toLowerCase());
+    if (targetClient) {
+      targetClient.invitedChannels.add(chanLower);
+      this.send(targetClient, `:${client.nickname}!${client.username}@${client.hostname} INVITE ${targetClient.nickname} :${channel.name}`);
+      this.send(client, `:${this.serverName} 341 ${client.nickname} ${targetClient.nickname} ${channel.name}`);
+    }
+  }
+
+  handleWallops(client, message) {
+    if (!client.isOper) {
+      this.send(client, `:${this.serverName} 481 ${client.nickname} :Permission Denied - You're not an IRC operator`);
+      return;
+    }
+    const wallMsg = `:${client.nickname}!${client.username}@${client.hostname} WALLOPS :${message}`;
+    for (const c of this.clients.values()) {
+      if (c.registered) {
+        this.send(c, wallMsg);
       }
     }
   }
@@ -607,7 +680,6 @@ class ShadowIRCServer {
         return;
       }
 
-      // Mode +b query (Ban List)
       if (modeFlags === 'b' && !param) {
         for (const banMask of channel.bans) {
           this.send(client, `:${this.serverName} 367 ${client.nickname} ${channel.name} ${banMask} ${client.nickname} ${Math.floor(Date.now() / 1000)}`);
@@ -766,7 +838,7 @@ class ShadowIRCServer {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🌌 SHADOW // IRC v3.0 [Cosmic Cyber Network]</title>
+  <title>🌌 SHADOW // IRC [Cosmic Space Network]</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', monospace; }
     body { background: #030308; color: #00f3ff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -781,6 +853,7 @@ class ShadowIRCServer {
     .nick { color: #00f3ff; font-weight: bold; }
     .system { color: #ffaa00; }
     .op { color: #ff007f; font-weight: bold; }
+    .action { color: #d000ff; font-style: italic; }
     #input-bar { background: rgba(7,7,18,0.9); padding: 12px; border-top: 1px solid #00f3ff; display: flex; }
     input { flex: 1; background: #070712; border: 1px solid #8a2be2; color: #00ff41; padding: 10px; outline: none; font-size: 14px; }
     button { background: #8a2be2; color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
@@ -790,7 +863,7 @@ class ShadowIRCServer {
 <body>
   <canvas id="space"></canvas>
   <header>
-    <h1>🌌 SHADOW // IRC v3.0 [Cosmic Web Client]</h1>
+    <h1>🌌 SHADOW // IRC [Cosmic Space Network]</h1>
     <span id="status">Status: Connecting...</span>
   </header>
   <div id="main">
@@ -801,7 +874,7 @@ class ShadowIRCServer {
     </div>
   </div>
   <div id="input-bar">
-    <input type="text" id="prompt" placeholder="Type /join #cosmos or /ns REGISTER <pass>..." autofocus />
+    <input type="text" id="prompt" placeholder="Type /me floats in deep space or /join #cosmos..." autofocus />
     <button onclick="sendMsg()">SEND</button>
   </div>
 
@@ -830,14 +903,14 @@ class ShadowIRCServer {
     const status = document.getElementById('status');
     const userList = document.getElementById('user-list');
     const prompt = document.getElementById('prompt');
-    let myNick = 'web_user_' + Math.floor(Math.random()*8999+1000);
+    let myNick = 'cosmic_user_' + Math.floor(Math.random()*8999+1000);
 
     ws.onopen = () => {
       status.innerText = 'Connected as ' + myNick;
       ws.send('CAP REQ :server-time echo-message\\r\\n');
       ws.send('CAP END\\r\\n');
       ws.send('NICK ' + myNick + '\\r\\n');
-      ws.send('USER ' + myNick + ' 0 * :Shadow Web User\\r\\n');
+      ws.send('USER ' + myNick + ' 0 * :Shadow Cosmic Web Client\\r\\n');
       ws.send('JOIN #cosmos\\r\\n');
     };
 
@@ -846,7 +919,17 @@ class ShadowIRCServer {
       const div = document.createElement('div');
       div.className = 'msg';
       const time = new Date().toLocaleTimeString();
-      div.innerHTML = '<span class="time">[' + time + ']</span> ' + escapeHtml(line);
+
+      // CTCP ACTION /me handling
+      if (line.includes('\\x01ACTION ') || line.includes('\x01ACTION ')) {
+        const nickMatch = line.match(/:([^!]+)!/);
+        const sender = nickMatch ? nickMatch[1] : 'user';
+        const actionText = line.substring(line.indexOf('ACTION ') + 7).replace(/\\x01/g, '').replace(/\x01/g, '');
+        div.innerHTML = '<span class="time">[' + time + ']</span> <span class="action">* ' + escapeHtml(sender) + ' ' + escapeHtml(actionText) + '</span>';
+      } else {
+        div.innerHTML = '<span class="time">[' + time + ']</span> ' + escapeHtml(line);
+      }
+      
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
 
@@ -862,7 +945,14 @@ class ShadowIRCServer {
       const text = prompt.value.trim();
       if (!text) return;
       prompt.value = '';
-      if (text.startsWith('/')) {
+      if (text.startsWith('/me ')) {
+        ws.send('PRIVMSG #cosmos :\\x01ACTION ' + text.substring(4) + '\\x01\\r\\n');
+        const div = document.createElement('div');
+        div.className = 'msg';
+        div.innerHTML = '<span class="time">[' + new Date().toLocaleTimeString() + ']</span> <span class="action">* ' + myNick + ' ' + escapeHtml(text.substring(4)) + '</span>';
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      } else if (text.startsWith('/')) {
         ws.send(text.substring(1) + '\\r\\n');
       } else {
         ws.send('PRIVMSG #cosmos :' + text + '\\r\\n');
