@@ -919,8 +919,10 @@
 
     // Welcome Cards setup
     addMsg('status', '🌌 Welcome to SHADOW-IRC Desktop v4.0 (Tauri Native Deep Space Suite)', 'system');
-    addMsg('status', '⚡ Features: Built-in Services (NickServ/ChanServ), IRCv3 Ring Buffer History, ZNC Bouncer, E2EE Encryption', 'system');
-    addMsg('#cosmos', '✨ Welcome to #cosmos! Type /me floats in zero-gravity to test CTCP actions.', 'system');
+    addMsg('status', '⚡ Features: Built-in Services (NickServ/ChanServ), Direct 1-on-1 DMs, IRCv3 Ring Buffer History, ZNC Bouncer, E2EE Encryption', 'system');
+    addMsg('#cosmos', '✨ Welcome to #cosmos! Click any user in the crew list on the right to open a Direct Message (DM)!', 'system');
+    addMsg('NickServ', '🛡️ NickServ Service Engine. Click buttons below to REGISTER or IDENTIFY your nickname.', 'system', 'NickServ', true);
+    addMsg('ChanServ', '👑 ChanServ Channel Engine. Click buttons below to REGISTER channel ownership or manage OP access.', 'system', 'ChanServ', true);
 
     function connectWebSocket() {
       const wsUrl = 'ws://localhost:8888';
@@ -956,14 +958,23 @@
             const nickMatch = line.match(/:([^!]+)!/);
             const sender = nickMatch ? nickMatch[1] : 'system';
             const targetMatch = line.match(/PRIVMSG ([^ ]+) :/);
-            const target = targetMatch ? targetMatch[1] : '#cosmos';
+            let target = targetMatch ? targetMatch[1] : '#cosmos';
             let msgText = line.substring(line.indexOf(' :') + 2);
+
+            let isDm = false;
+            // Direct 1-on-1 Message routing
+            if (!target.startsWith('#')) {
+              if (target.toLowerCase() === myNick.toLowerCase() || target.toLowerCase() === 'system') {
+                target = sender;
+              }
+              isDm = true;
+            }
 
             if (msgText.includes('\x01ACTION ') || msgText.includes('\\x01ACTION ')) {
               const act = msgText.replace(/\\x01ACTION |\x01ACTION |\\x01|\x01/g, '');
-              addMsg(target, '* ' + sender + ' ' + act, 'action', sender);
+              addMsg(target, '* ' + sender + ' ' + act, 'action', sender, isDm);
             } else {
-              addMsg(target, msgText, 'chat', sender);
+              addMsg(target, msgText, 'chat', sender, isDm);
             }
           } else if (line.includes(' 353 ')) {
             // Names reply
@@ -996,9 +1007,9 @@
         };
 
         ws.onclose = () => {
-          document.getElementById('net-status').innerText = 'DISCONNECTED (RETRYING...)';
+          document.getElementById('net-status').innerText = 'DISCONNECTED (RETRYING IN 3s...)';
           document.getElementById('status-indicator').classList.add('offline');
-          setTimeout(connectWebSocket, 4000);
+          setTimeout(connectWebSocket, 3000);
         };
 
         ws.onerror = () => {
@@ -1013,10 +1024,10 @@
 
     connectWebSocket();
 
-    function addMsg(winName, body, type = 'chat', sender = 'System') {
+    function addMsg(winName, body, type = 'chat', sender = 'System', isDm = false) {
       if (!windows.has(winName)) {
-        windows.set(winName, { title: winName, messages: [], users: new Set(), unread: 0, topic: 'Cosmic Channel' });
-        createTabElement(winName);
+        windows.set(winName, { title: winName, messages: [], users: new Set(), unread: 0, topic: isDm ? ('Direct Message with ' + winName) : 'Cosmic Channel', isDm });
+        createTabElement(winName, isDm);
       }
       const win = windows.get(winName);
       const msgObj = {
@@ -1035,16 +1046,18 @@
       }
     }
 
-    function createTabElement(winName) {
-      const list = document.getElementById('chan-list');
+    function createTabElement(winName, isDm = false) {
+      const isChannel = winName.startsWith('#') || winName === 'status';
+      const targetList = isChannel ? document.getElementById('chan-list') : document.getElementById('dm-list');
       if (document.getElementById('tab-' + winName)) return;
 
       const li = document.createElement('li');
       li.className = 'tree-item';
       li.id = 'tab-' + winName;
       li.onclick = () => switchWindow(winName);
-      li.innerHTML = `<span>🚀 ${winName}</span><span class="badge-unread" id="unread-${winName}" style="display:none;">0</span>`;
-      list.appendChild(li);
+      const icon = winName === 'status' ? '🌐' : (isChannel ? '🚀' : '💬');
+      li.innerHTML = `<span>${icon} ${winName}</span><span class="badge-unread" id="unread-${winName}" style="display:none;">0</span>`;
+      targetList.appendChild(li);
     }
 
     function updateUnreadBadge(winName) {
@@ -1058,6 +1071,23 @@
           badge.style.display = 'none';
         }
       }
+    }
+
+    function openDirectMessage(targetNick) {
+      if (!targetNick || targetNick === myNick) return;
+      if (!windows.has(targetNick)) {
+        windows.set(targetNick, {
+          title: targetNick,
+          messages: [],
+          users: new Set([myNick, targetNick]),
+          unread: 0,
+          topic: 'Direct Message with ' + targetNick,
+          isDm: true
+        });
+        createTabElement(targetNick, true);
+        addMsg(targetNick, '💬 Direct 1-on-1 private messaging session established with ' + targetNick + '. Messages are private.', 'system', 'System', true);
+      }
+      switchWindow(targetNick);
     }
 
     function switchWindow(winName) {
@@ -1080,7 +1110,35 @@
       const win = windows.get(currentWindow);
       if (!win) { msgBox.innerHTML = ''; return; }
 
-      msgBox.innerHTML = win.messages.map(m => {
+      let htmlContent = '';
+
+      // Render Service Dashboard Cards if in NickServ or ChanServ DM
+      if (currentWindow === 'NickServ') {
+        htmlContent += `
+          <div style="background: rgba(138,43,226,0.15); border: 1px solid var(--accent-violet); padding: 14px; border-radius: 10px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-weight: 700; color: var(--accent-cyan); font-size: 14px;">🛡️ NickServ Service Dashboard</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Manage your registered nickname, identify credentials, or ghost unauthorized sessions.</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+              <button class="send-btn" style="padding: 5px 12px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
+              <button class="send-btn" style="padding: 5px 12px; font-size: 11px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));" onclick="promptIdentifyNick()">🔑 Identify</button>
+              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/ns INFO')">ℹ️ Nick Info</button>
+              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/ns GHOST ' + myNick)">👻 Ghost Session</button>
+            </div>
+          </div>`;
+      } else if (currentWindow === 'ChanServ') {
+        htmlContent += `
+          <div style="background: rgba(255,0,127,0.15); border: 1px solid var(--accent-magenta); padding: 14px; border-radius: 10px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-weight: 700; color: var(--accent-magenta); font-size: 14px;">👑 ChanServ Channel Dashboard</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Register channel ownership, manage Founder access, or grant Operator (@op) privileges.</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+              <button class="send-btn" style="padding: 5px 12px; font-size: 11px;" onclick="sendQuickCmd('/cs REGISTER #cosmos Deep Space Network')">👑 Register #cosmos</button>
+              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/cs OP #cosmos ' + myNick)">⚡ Op Self</button>
+              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/cs INFO #cosmos')">ℹ️ Channel Info</button>
+            </div>
+          </div>`;
+      }
+
+      htmlContent += win.messages.map(m => {
         const isOp = m.sender.startsWith('@');
         const isVoice = m.sender.startsWith('+');
         const avatarLetter = m.sender.replace(/[@+]/g, '').charAt(0).toUpperCase() || 'S';
@@ -1124,6 +1182,7 @@
         }
       }).join('');
 
+      msgBox.innerHTML = htmlContent;
       msgBox.scrollTop = msgBox.scrollHeight;
     }
 
@@ -1135,12 +1194,14 @@
       userCountEl.innerText = arr.length;
 
       userListEl.innerHTML = arr.map(u => {
+        const clean = u.replace(/[@+]/g, '');
         const isOp = u.startsWith('@');
         const isVoice = u.startsWith('+');
         return `
-          <li class="user-item ${isOp?'op':(isVoice?'voice':'')}">
+          <li class="user-item ${isOp?'op':(isVoice?'voice':'')}" onclick="openDirectMessage('${clean}')" title="Click to send Direct Message (DM) to ${clean}">
             <div class="user-role-dot"></div>
             <span>${escapeHtml(u)}</span>
+            <span style="font-size: 10px; color: var(--accent-cyan); opacity: 0.6; margin-left: auto;">💬 DM</span>
           </li>`;
       }).join('');
     }
@@ -1158,13 +1219,16 @@
         return;
       }
 
+      let target = currentWindow;
+      if (currentWindow === 'status') target = '#cosmos';
+      const isDm = !target.startsWith('#') && target !== 'status';
+
       if (val.startsWith('/me ')) {
         const actText = val.substring(4);
         if (ws && ws.readyState === WebSocket.OPEN) {
-          const target = currentWindow.startsWith('#') ? currentWindow : '#cosmos';
           ws.send('PRIVMSG ' + target + ' :\x01ACTION ' + actText + '\x01\r\n');
         }
-        addMsg(currentWindow, '* ' + myNick + ' ' + actText, 'action', myNick);
+        addMsg(currentWindow, '* ' + myNick + ' ' + actText, 'action', myNick, isDm);
       } else if (val.startsWith('/join ')) {
         const chan = val.split(' ')[1];
         if (chan) {
@@ -1179,11 +1243,10 @@
         if (ws && ws.readyState === WebSocket.OPEN) ws.send(val.substring(1) + '\r\n');
         addMsg('status', 'EXEC: ' + val, 'system');
       } else {
-        const target = currentWindow.startsWith('#') ? currentWindow : '#cosmos';
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send('PRIVMSG ' + target + ' :' + val + '\r\n');
         }
-        addMsg(target, val, 'chat', myNick);
+        addMsg(target, val, 'chat', myNick, isDm);
       }
     }
 
