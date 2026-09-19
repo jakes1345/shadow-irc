@@ -79,14 +79,14 @@ class ShadowIRCServer {
       console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Native TCP Space Engine on \x1b[35m${this.host}:${this.port}\x1b[0m`);
     });
 
-    // 2. HTTP Server + WebSocket Server (Port 8888) for Web Browsers
+    // 2. HTTP Server (Web Hosting Disabled) + WebSocket Server (Port 8888) for Tauri Native Desktop App
     this.httpServer = http.createServer((req, res) => this.handleHttpRequest(req, res));
     this.wss = new WebSocketServer({ server: this.httpServer });
     
     this.wss.on('connection', (ws, req) => this.handleWsConnection(ws, req));
 
     this.httpServer.listen(this.webPort, this.host, () => {
-      console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Cosmic Web Gateway on \x1b[32mhttp://${this.host}:${this.webPort}\x1b[0m`);
+      console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Native Desktop WS Bridge on \x1b[32mws://${this.host}:${this.webPort}\x1b[0m \x1b[31m(Web Hosting Disabled - Tauri App & Terminal Only)\x1b[0m`);
     });
   }
 
@@ -840,20 +840,8 @@ class ShadowIRCServer {
   }
 
   handleHttpRequest(req, res) {
-    try {
-      const desktopHtmlPath = path.join(__dirname, '../../src-desktop/index.html');
-      if (fs.existsSync(desktopHtmlPath)) {
-        const html = fs.readFileSync(desktopHtmlPath, 'utf8');
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(html);
-        return;
-      }
-    } catch (err) {
-      console.error('[HTTP ERROR]', err.message);
-    }
-
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('SHADOW-IRCD Web Gateway: Index File Not Found');
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('403 Access Denied: SHADOW-IRC does not host web sites or browser clients. Zero web hosting permitted. Use native Tauri Desktop app (npm run desktop) or Terminal TUI client (npm run client).');
   }
 }
 
