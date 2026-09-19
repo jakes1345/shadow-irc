@@ -1,3 +1,9 @@
 #!/usr/bin/env node
 
-import '../src/server/ircd.js';
+import ShadowIRCServer from '../src/server/ircd.js';
+
+const port = process.env.PORT || 6667;
+const webPort = process.env.WEB_PORT || 8888;
+
+const server = new ShadowIRCServer({ port, webPort });
+server.start();

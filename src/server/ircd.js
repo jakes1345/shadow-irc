@@ -14,7 +14,7 @@ import { WebSocketServer } from 'ws';
 class ShadowIRCServer {
   constructor(options = {}) {
     this.port = options.port || 6667;
-    this.webPort = options.webPort || 8080;
+    this.webPort = options.webPort || 8888;
     this.host = options.host || '0.0.0.0';
     this.serverName = options.serverName || 'shadow.cosmos.net';
     this.version = 'shadow-ircd-2.0.0-hybrid';

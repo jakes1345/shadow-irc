@@ -1,3 +1,10 @@
 #!/usr/bin/env node
 
-import '../src/client/tui.js';
+import ShadowIRCClient from '../src/client/tui.js';
+
+const host = process.argv[2] || 'localhost';
+const port = parseInt(process.argv[3] || '6667', 10);
+const nick = process.argv[4] || `shadow_${Math.floor(Math.random() * 8999 + 1000)}`;
+
+const client = new ShadowIRCClient({ host, port, nickname: nick });
+client.connect();

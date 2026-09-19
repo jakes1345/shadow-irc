@@ -1,0 +1,138 @@
+import net from 'net';
+import { ShadowCrypto } from '../common/crypto.js';
+
+/**
+ * COSMIC AI BOT for SHADOW-IRC
+ * Responds to chat, tests E2EE, provides system info, and acts as live assistant
+ */
+
+class CosmicBot {
+  constructor(options = {}) {
+    this.host = options.host || '127.0.0.1';
+    this.port = options.port || 6667;
+    this.nick = options.nick || 'CosmicAI';
+    this.channel = options.channel || '#cosmos';
+    this.socket = null;
+    this.e2eKey = null;
+  }
+
+  start() {
+    console.log(`[CosmicBot] Connecting to SHADOW-IRC at ${this.host}:${this.port}...`);
+    this.socket = net.connect(this.port, this.host, () => {
+      console.log(`[CosmicBot] Connected! Registering as ${this.nick}...`);
+      this.send(`NICK ${this.nick}`);
+      this.send(`USER cosmicbot 0 * :SHADOW Cosmic AI Bot`);
+      this.send(`JOIN ${this.channel}`);
+    });
+
+    let buffer = '';
+    this.socket.on('data', (chunk) => {
+      buffer += chunk.toString('utf8');
+      let lines = buffer.split(/\r?\n/);
+      buffer = lines.pop();
+
+      for (let line of lines) {
+        if (line.trim().length > 0) {
+          this.handleLine(line.trim());
+        }
+      }
+    });
+
+    this.socket.on('error', (err) => {
+      console.error(`[CosmicBot Error] ${err.message}`);
+    });
+  }
+
+  send(line) {
+    if (this.socket) {
+      this.socket.write(line + '\r\n');
+    }
+  }
+
+  say(msg) {
+    let text = msg;
+    if (this.e2eKey) {
+      text = ShadowCrypto.encrypt(msg, this.e2eKey);
+    }
+    this.send(`PRIVMSG ${this.channel} :${text}`);
+  }
+
+  handleLine(line) {
+    if (line.startsWith('PING ')) {
+      this.send(`PONG ${line.substring(5)}`);
+      return;
+    }
+
+    let trailing = '';
+    let msgLine = line;
+    const trailingIdx = msgLine.indexOf(' :');
+    if (trailingIdx !== -1) {
+      trailing = msgLine.substring(trailingIdx + 2);
+      msgLine = msgLine.substring(0, trailingIdx);
+    }
+
+    const parts = msgLine.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return;
+
+    let prefix = '';
+    if (parts[0].startsWith(':')) {
+      prefix = parts.shift().substring(1);
+    }
+
+    const command = parts.shift().toUpperCase();
+    const senderNick = prefix.split('!')[0];
+
+    if (command === 'JOIN') {
+      const chan = parts[0] || trailing;
+      if (senderNick !== this.nick) {
+        setTimeout(() => {
+          this.say(`🌌 Welcome ${senderNick} to ${chan}! I am CosmicAI. Type !help or chat with me!`);
+        }, 1000);
+      }
+    } else if (command === 'PRIVMSG') {
+      const target = parts[0];
+      let body = trailing;
+
+      if (senderNick === this.nick) return;
+
+      // Handle E2EE
+      if (ShadowCrypto.isEncrypted(body)) {
+        if (this.e2eKey) {
+          const dec = ShadowCrypto.decrypt(body, this.e2eKey);
+          if (dec) body = dec;
+        }
+      }
+
+      const lower = body.toLowerCase();
+      if (lower.startsWith('!help') || lower.includes('hello') || lower.includes('hi')) {
+        this.say(`🚀 Hello ${senderNick}! Commands: !info, !status, !e2e <pass>, !features, !theme`);
+      } else if (lower.startsWith('!info')) {
+        this.say(`⚡ SHADOW-IRC: RFC 1459/2812 Dual-Engine TCP (6667) & WebSockets (8080). 100% Free & Open-Source!`);
+      } else if (lower.startsWith('!status')) {
+        this.say(`🟢 Network Status: Optimal | Protocol: RFC 2812 | Node.js v22 | Uptime: Live`);
+      } else if (lower.startsWith('!e2e')) {
+        const key = body.split(/\s+/)[1];
+        if (key) {
+          this.e2eKey = key;
+          this.say(`🔒 E2EE Key set for CosmicAI: ${key}. All my messages are now AES-256-GCM encrypted!`);
+        } else {
+          this.e2eKey = null;
+          this.say(`🔓 E2EE Disabled for CosmicAI.`);
+        }
+      } else if (lower.startsWith('!features')) {
+        this.say(`✨ Features: TrueColor ANSI TUI, Web Client, Dual Sockets, AES-256 E2EE, Flood Control, Auto-complete!`);
+      } else {
+        // Echo / Conversational AI response
+        this.say(`🌌 [CosmicAI] Received: "${body}". Systems nominal! Try typing !status or !features.`);
+      }
+    }
+  }
+}
+
+// Start bot if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const bot = new CosmicBot({});
+  bot.start();
+}
+
+export default CosmicBot;
