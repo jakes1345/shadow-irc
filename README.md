@@ -1,12 +1,17 @@
-# 🌌 SHADOW-IRC v3.0 Enterprise Architecture
+<p align="center">
+  <img src="assets/logo.png" alt="SHADOW-IRC Cosmic Event Horizon Logo" width="180" height="180" style="border-radius: 50%; box-shadow: 0 0 30px rgba(0, 243, 255, 0.4);" />
+</p>
+
+# 🌌 SHADOW-IRC v4.0 Ultimate Deep Space Suite
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Protocol](https://img.shields.io/badge/Protocol-RFC_1459%2F2812%2FIRCv3-magenta.svg)](#protocol)
+[![Tauri](https://img.shields.io/badge/Desktop-Tauri_v2-cyan.svg)](#tauri-v2)
 [![Security](https://img.shields.io/badge/E2EE-AES--256--GCM-brightgreen.svg)](#e2ee)
 [![Services](https://img.shields.io/badge/Services-NickServ%20%7C%20ChanServ%20%7C%20MemoServ%20%7C%20HostServ-purple.svg)](#services)
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Web-orange.svg)](#cross-platform)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20macOS-orange.svg)](#cross-platform)
 
-**SHADOW-IRC v3.0 Enterprise Edition** is a 100% free and open-source (MIT) production-grade IRC suite featuring built-in IRC Services (`NickServ`, `ChanServ`, `MemoServ`, `HostServ`), IRCv3 Capability Negotiation & History Replay (`server-time`, `chathistory`), ZNC-style 24/7 Bouncer Session Persistence, and Wildcard/CIDR Ban Mask Filtering (`+b`).
+**SHADOW-IRC v4.0** is a 100% free and open-source (MIT) cross-platform IRC suite featuring a native **Tauri v2 Desktop App**, **24-bit TrueColor Terminal TUI Client**, built-in IRC Services (`NickServ`, `ChanServ`, `MemoServ`, `HostServ`), IRCv3 History Replay, ZNC-style 24/7 Bouncer, and IP Cloaking under a **Deep Space Cosmic Event Horizon** aesthetic.
 
 ---
 

@@ -76,15 +76,12 @@
     }
 
     .brand-logo {
-      width: 34px;
-      height: 34px;
-      background: radial-gradient(circle at 30% 30%, #00f3ff, #9d4edd 60%, #ff007f);
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       box-shadow: 0 0 16px var(--accent-cyan-glow), 0 0 24px var(--accent-magenta-glow);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
+      object-fit: cover;
+      border: 1px solid rgba(0, 243, 255, 0.4);
     }
 
     .brand-title {
@@ -575,7 +572,7 @@
   <!-- Header -->
   <header>
     <div class="brand">
-      <div class="brand-logo">🌌</div>
+      <img src="logo.png" class="brand-logo" alt="SHADOW // IRC Logo" />
       <div class="brand-title">SHADOW // IRC</div>
       <span class="brand-tag">Deep Space Network</span>
     </div>
