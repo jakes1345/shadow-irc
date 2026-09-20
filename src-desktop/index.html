@@ -18,12 +18,12 @@
       --bg-card: rgba(12, 10, 28, 0.72);
       --bg-card-hover: rgba(22, 18, 48, 0.85);
       --glass-border: rgba(138, 43, 226, 0.28);
-      --glass-border-bright: rgba(0, 243, 255, 0.5);
-      --accent-cyan: #00f3ff;
-      --accent-cyan-glow: rgba(0, 243, 255, 0.35);
+      --glass-border-bright: rgba(93, 169, 233, 0.5);
+      --accent-cyan: #5da9e9;
+      --accent-cyan-glow: rgba(93, 169, 233, 0.35);
       --accent-violet: #9d4edd;
-      --accent-magenta: #ff007f;
-      --accent-magenta-glow: rgba(255, 0, 127, 0.35);
+      --accent-magenta: #d16ba5;
+      --accent-magenta-glow: rgba(209, 107, 165, 0.35);
       --accent-green: #00ff9d;
       --accent-gold: #ffb703;
       --text-main: #f1f5f9;
@@ -84,7 +84,7 @@
       border-radius: 50%;
       box-shadow: 0 0 16px var(--accent-cyan-glow), 0 0 24px var(--accent-magenta-glow);
       object-fit: cover;
-      border: 1px solid rgba(0, 243, 255, 0.4);
+      border: 1px solid rgba(93, 169, 233, 0.4);
     }
 
     .brand-title {
@@ -92,10 +92,10 @@
       font-weight: 700;
       font-size: 17px;
       letter-spacing: 1px;
-      background: linear-gradient(135deg, #ffffff 30%, #00f3ff 70%, #ff007f 100%);
+      background: linear-gradient(135deg, #ffffff 30%, #5da9e9 70%, #d16ba5 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+      text-shadow: 0 0 20px rgba(93, 169, 233, 0.2);
     }
 
     .brand-tag {
@@ -184,7 +184,7 @@
     }
 
     .quick-btn {
-      background: rgba(0, 243, 255, 0.1);
+      background: rgba(93, 169, 233, 0.1);
       border: 1px solid var(--glass-border);
       color: var(--accent-cyan);
       border-radius: 6px;
@@ -234,16 +234,16 @@
     li.tree-item:hover {
       background: var(--bg-card-hover);
       color: var(--accent-cyan);
-      border-color: rgba(0, 243, 255, 0.2);
+      border-color: rgba(93, 169, 233, 0.2);
       transform: translateX(3px);
     }
 
     li.tree-item.active {
-      background: linear-gradient(90deg, rgba(255, 0, 127, 0.25) 0%, rgba(157, 78, 221, 0.2) 100%);
+      background: linear-gradient(90deg, rgba(209, 107, 165, 0.25) 0%, rgba(157, 78, 221, 0.2) 100%);
       color: #ffffff;
       font-weight: 600;
       border: 1px solid var(--accent-magenta);
-      box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+      box-shadow: 0 0 15px rgba(209, 107, 165, 0.2);
     }
 
     .badge-unread {
@@ -295,8 +295,8 @@
       font-size: 10px;
       font-family: var(--font-code);
       color: var(--accent-cyan);
-      background: rgba(0, 243, 255, 0.1);
-      border: 1px solid rgba(0, 243, 255, 0.3);
+      background: rgba(93, 169, 233, 0.1);
+      border: 1px solid rgba(93, 169, 233, 0.3);
       padding: 2px 7px;
       border-radius: 4px;
     }
@@ -344,7 +344,7 @@
       font-weight: 700;
       font-size: 13px;
       color: #000;
-      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+      box-shadow: 0 0 10px rgba(93, 169, 233, 0.2);
       flex-shrink: 0;
     }
 
@@ -394,7 +394,7 @@
     }
 
     .msg-card.system {
-      background: rgba(0, 243, 255, 0.08);
+      background: rgba(93, 169, 233, 0.08);
       border-left: 3px solid var(--accent-cyan);
     }
 
@@ -658,7 +658,7 @@
     }
 
     .guide-callout {
-      background: rgba(0, 243, 255, 0.08);
+      background: rgba(93, 169, 233, 0.08);
       border-left: 3px solid var(--accent-cyan);
       padding: 10px;
       border-radius: 6px;
@@ -694,7 +694,7 @@
 
     <div class="header-stats">
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(157, 78, 221, 0.25); border-color: var(--accent-violet); color: #fff;" onclick="toggleSuperViewModal(true)">👑 Super-View</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(255, 0, 127, 0.2); border-color: var(--accent-magenta); color: #fff;" onclick="toggleGuideModal(true)">❓ Guide & Tour</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(209, 107, 165, 0.2); border-color: var(--accent-magenta); color: #fff;" onclick="toggleGuideModal(true)">❓ Guide & Tour</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptChangeServerNode()">🌐 Server Node</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptIdentifyNick()">🔑 Identify</button>
@@ -807,7 +807,7 @@
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0;">
-        <div style="background: rgba(0, 243, 255, 0.08); border: 1px solid var(--accent-cyan); border-radius: 8px; padding: 12px;">
+        <div style="background: rgba(93, 169, 233, 0.08); border: 1px solid var(--accent-cyan); border-radius: 8px; padding: 12px;">
           <div style="font-size: 10px; color: var(--accent-cyan); font-weight: 700;">NETWORK NODE</div>
           <div style="font-size: 14px; font-weight: 700; margin-top: 4px;" id="super-node-val">shadowspace.space</div>
         </div>
@@ -815,7 +815,7 @@
           <div style="font-size: 10px; color: var(--accent-violet); font-weight: 700;">OPERATOR PRIVILEGES</div>
           <div style="font-size: 14px; font-weight: 700; color: var(--accent-green); margin-top: 4px;">👑 OperServ (+o)</div>
         </div>
-        <div style="background: rgba(255, 0, 127, 0.08); border: 1px solid var(--accent-magenta); border-radius: 8px; padding: 12px;">
+        <div style="background: rgba(209, 107, 165, 0.08); border: 1px solid var(--accent-magenta); border-radius: 8px; padding: 12px;">
           <div style="font-size: 10px; color: var(--accent-magenta); font-weight: 700;">E2EE ENGINE</div>
           <div style="font-size: 14px; font-weight: 700; margin-top: 4px;" id="super-e2ee-val">AES-256-GCM (0 active)</div>
         </div>
@@ -831,7 +831,7 @@
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px;" onclick="execOperCmd('/oper admin cosmicsecret')">👑 Authenticate Oper</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(157, 78, 221, 0.4);" onclick="promptGlobalBroadcast()">📢 Global Broadcast</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(0, 255, 157, 0.4);" onclick="execOperCmd('/stats')">📊 Server Stats</button>
-          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(255, 0, 127, 0.4);" onclick="promptOperKill()">⚡ Kill User</button>
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(209, 107, 165, 0.4);" onclick="promptOperKill()">⚡ Kill User</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(255, 0, 0, 0.6);" onclick="sendQuickCmd('/nuke')">🚨 Anti-Forensic Purge</button>
         </div>
       </div>
@@ -946,7 +946,7 @@
       x: Math.random() * width,
       y: Math.random() * height,
       r: Math.random() * 2.4 + 0.4,
-      color: ['#00f3ff', '#9d4edd', '#ff007f', '#00ff9d', '#ffffff', '#ffb703'][Math.floor(Math.random() * 6)],
+      color: ['#5da9e9', '#9d4edd', '#d16ba5', '#00ff9d', '#ffffff', '#ffb703'][Math.floor(Math.random() * 6)],
       alpha: Math.random() * 0.8 + 0.2,
       speedY: Math.random() * 0.25 + 0.05,
       speedX: (Math.random() - 0.5) * 0.1,
@@ -1016,8 +1016,8 @@
         ctx.moveTo(m.x, m.y);
         ctx.lineTo(m.x - Math.cos(m.angle) * m.length, m.y - Math.sin(m.angle) * m.length);
         const grad = ctx.createLinearGradient(m.x, m.y, m.x - Math.cos(m.angle) * m.length, m.y - Math.sin(m.angle) * m.length);
-        grad.addColorStop(0, 'rgba(0, 243, 255, ' + m.alpha + ')');
-        grad.addColorStop(1, 'rgba(255, 0, 127, 0)');
+        grad.addColorStop(0, 'rgba(93, 169, 233, ' + m.alpha + ')');
+        grad.addColorStop(1, 'rgba(209, 107, 165, 0)');
         ctx.strokeStyle = grad;
         ctx.lineWidth = 2;
         ctx.stroke();
