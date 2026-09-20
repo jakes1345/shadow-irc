@@ -1,5 +1,12 @@
 name = "shadow-irc-space"
-pages_build_output_dir = "website"
+main = "src/worker.js"
+compatibility_date = "2024-09-19"
 
 [vars]
 SERVER_NAME = "shadowspace.space"
+
+[rules]
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = false
