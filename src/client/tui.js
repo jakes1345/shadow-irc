@@ -1,5 +1,6 @@
 import blessed from 'neo-blessed';
 import net from 'net';
+import tls from 'tls';
 import readline from 'readline';
 import { ShadowCrypto } from '../common/crypto.js';
 
@@ -11,7 +12,9 @@ import { ShadowCrypto } from '../common/crypto.js';
 class ShadowIRCClient {
   constructor(options = {}) {
     this.host = options.host || 'localhost';
-    this.port = options.port || 6667;
+    this.port = options.port || 6697;
+    // Plaintext only for a local dev server; anything remote goes over TLS
+    this.useTls = options.tls ?? !['localhost', '127.0.0.1'].includes(this.host);
     this.nickname = options.nickname || `shadow_${Math.floor(Math.random() * 8999 + 1000)}`;
     this.username = options.username || 'shadow_user';
     this.realname = options.realname || 'Shadow Cosmic User';
@@ -360,14 +363,17 @@ class ShadowIRCClient {
   connect() {
     this.logMessage('status', `{bold}{#00f3ff-fg}[SYSTEM]{/#00f3ff-fg}{/bold} Connecting to native IRC server at {#b026ff-fg}${this.host}:${this.port}{/#b026ff-fg}...`);
     
-    this.socket = net.connect(this.port, this.host, () => {
+    const onConnect = () => {
       this.connected = true;
       this.logMessage('status', `{bold}{#00ff66-fg}[SUCCESS]{/#00ff66-fg}{/bold} Socket established! Sending IRC Registration...`);
       
       // IRC Registration Sequence
       this.sendRaw(`NICK ${this.nickname}`);
       this.sendRaw(`USER ${this.username} 0 * :${this.realname}`);
-    });
+    };
+    this.socket = this.useTls
+      ? tls.connect({ host: this.host, port: this.port, servername: this.host }, onConnect)
+      : net.connect(this.port, this.host, onConnect);
 
     let buffer = '';
     this.socket.on('data', (data) => {
@@ -434,7 +440,8 @@ class ShadowIRCClient {
       case 'connect':
       case 'server':
         this.host = args[0] || 'localhost';
-        this.port = parseInt(args[1] || '6667', 10);
+        this.useTls = !['localhost', '127.0.0.1'].includes(this.host);
+        this.port = parseInt(args[1] || (this.useTls ? '6697' : '6667'), 10);
         this.connect();
         break;
       case 'join':
@@ -825,7 +832,8 @@ class ShadowIRCClient {
 // Auto-instantiate if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const host = process.argv[2] || 'localhost';
-  const port = parseInt(process.argv[3] || '6667', 10);
+  const localDev = ['localhost', '127.0.0.1'].includes(host);
+  const port = parseInt(process.argv[3] || (localDev ? '6667' : '6697'), 10);
   const nick = process.argv[4] || `shadow_${Math.floor(Math.random() * 8999 + 1000)}`;
 
   const client = new ShadowIRCClient({ host, port, nickname: nick });

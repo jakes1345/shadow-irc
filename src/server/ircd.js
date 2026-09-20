@@ -50,10 +50,6 @@ class ShadowIRCServer {
     this.history = new IRCv3HistoryEngine(500);
     this.bouncer = new BouncerEngine();
     
-    // Operator Credentials
-    this.operUser = options.operUser || 'Shadow';
-    this.operPass = options.operPass || 'cosmicsecret';
-    
     // Rate Limiting
     this.maxMessageRate = 12;
     
@@ -335,7 +331,7 @@ class ShadowIRCServer {
         this.handleList(client);
         break;
       case 'OPER':
-        this.handleOper(client, args[0], args[1]);
+        this.handleOper(client);
         break;
       case 'WALLOPS':
       case 'OPERWALL':
@@ -879,21 +875,15 @@ class ShadowIRCServer {
     this.send(client, `:${this.serverName} 323 ${client.nickname} :End of /LIST`);
   }
 
-  handleOper(client, user, password) {
-    if (!user || !password) {
-      this.send(client, `:${this.serverName} 461 ${client.nickname || '*'} OPER :Not enough parameters`);
+  // Operator status is tied to the identified master account, not a shared password
+  handleOper(client) {
+    const account = client.identified && this.services.accounts.get(client.account);
+    if (!account || !account.isMasterAdmin) {
+      this.send(client, `:${this.serverName} 464 ${client.nickname || '*'} :Identify as the Network Master account first`);
       return;
     }
-    if ((user.toLowerCase() === 'shadow' || user === this.operUser) && password === this.operPass) {
-      if (client.nickname.toLowerCase() !== 'shadow') {
-        this.send(client, `:${this.serverName} 464 ${client.nickname} :Super-View Oper Godmode is strictly reserved for user "Shadow"`);
-        return;
-      }
-      client.isOper = true;
-      this.send(client, `:${this.serverName} 381 ${client.nickname} :You are now Network Master Operator (Shadow Godmode Granted)`);
-    } else {
-      this.send(client, `:${this.serverName} 464 ${client.nickname} :Password incorrect`);
-    }
+    client.isOper = true;
+    this.send(client, `:${this.serverName} 381 ${client.nickname} :You are now Network Master Operator`);
   }
 
   handleKick(client, targetChan, targetNick, reason) {
