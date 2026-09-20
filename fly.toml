@@ -8,6 +8,10 @@ primary_region = "iad"
   PORT = "6667"
   WEB_PORT = "8888"
 
+[mounts]
+  source = "shadow_data"
+  destination = "/app/data"
+
 # HTTP + WebSocket service (web client at app.shadowspace.space)
 [[services]]
   internal_port = 8888
@@ -30,6 +34,7 @@ primary_region = "iad"
     soft_limit = 400
 
 # Raw TCP IRC (port 6667 for native IRC clients)
+# Native IRC clients: TLS only. Fly terminates TLS on 6697 and hands plaintext to the daemon.
 [[services]]
   internal_port = 6667
   protocol = "tcp"
@@ -38,7 +43,8 @@ primary_region = "iad"
   min_machines_running = 1
 
   [[services.ports]]
-    port = 6667
+    handlers = ["tls"]
+    port = 6697
 
 [[vm]]
   memory = "256mb"

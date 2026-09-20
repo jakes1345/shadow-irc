@@ -823,7 +823,7 @@
       <div style="margin-bottom: 20px;">
         <h4 style="color: var(--accent-cyan); margin-bottom: 10px;">⚡ Quick Operator Actions</h4>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="send-btn" style="padding: 6px 14px; font-size: 12px;" onclick="execOperCmd('/oper admin cosmicsecret')">👑 Authenticate Oper</button>
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px;" onclick="execOperCmd('/oper')">👑 Authenticate Oper</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(167, 139, 250, 0.4);" onclick="promptGlobalBroadcast()">📢 Global Broadcast</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(94, 230, 168, 0.4);" onclick="execOperCmd('/stats')">📊 Server Stats</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(232, 121, 159, 0.4);" onclick="promptOperKill()">⚡ Kill User</button>
@@ -877,11 +877,12 @@
 
       <!-- Step 2 -->
       <div class="guide-content" id="gstep-2" style="display:none;">
-        <h4 style="color: var(--accent-cyan);">🛡️ 2. NickServ: Password Nick Registration</h4>
-        <p>Register your current nickname to protect it from being used by anyone else across the network.</p>
-        <code>/ns REGISTER &lt;password&gt;</code>
-        <p>To identify when you reconnect:</p>
-        <code>/ns IDENTIFY &lt;password&gt;</code>
+        <h4 style="color: var(--accent-cyan);">🛡️ 2. NickServ: Device-Key Registration</h4>
+        <p>Register your nickname to this device. Your browser creates a private key it can sign with but never reveal; the server stores only the public half — no password, no email, no timestamps.</p>
+        <code>/ns REGISTERKEY</code> <span style="color: var(--text-muted);">(the Register button does this for you)</span>
+        <p>Reconnecting identifies you automatically. To add a second device, click Register there and confirm once with your password, or from an identified device:</p>
+        <code>/ns ADDKEY &lt;pubkey&gt; &nbsp;·&nbsp; /ns LISTKEYS &nbsp;·&nbsp; /ns DELKEY &lt;fingerprint&gt;</code>
+        <p>Password fallback for native IRC clients: <code>/ns REGISTER &lt;password&gt;</code> and <code>/ns IDENTIFY &lt;password&gt;</code>.</p>
         <button class="send-btn" style="margin-top:8px; padding: 6px 14px; font-size:12px; align-self: flex-start;" onclick="promptRegisterNick()">⚡ Run Registration Now</button>
       </div>
 
@@ -898,11 +899,11 @@
       <!-- Step 4 -->
       <div class="guide-content" id="gstep-4" style="display:none;">
         <h4 style="color: var(--accent-cyan);">⚡ 4. Server Operator (/oper) Authorization</h4>
-        <p>Gain global IRC Server Operator (IRCop) privileges across the entire network.</p>
-        <code>/oper admin cosmicsecret</code>
+        <p>Operator status belongs to the Network Master account. Identify as <strong>Shadow</strong> (device key or password) and it is granted automatically — there is no shared oper password.</p>
+        <code>/oper</code>
         <p>Broadcast network notices to all connected nodes:</p>
         <code>/wallops &lt;message&gt;</code>
-        <button class="send-btn" style="margin-top:8px; padding: 6px 14px; font-size:12px; align-self: flex-start;" onclick="sendQuickCmd('/oper admin cosmicsecret')">⚡ Become Server Operator Now</button>
+        <button class="send-btn" style="margin-top:8px; padding: 6px 14px; font-size:12px; align-self: flex-start;" onclick="sendQuickCmd('/oper')">⚡ Claim Operator Status</button>
       </div>
 
       <!-- Step 5 -->
@@ -924,6 +925,102 @@
   </div>
 
   <script>
+    // 0. Device identity: ECDSA P-256 keypair. The private half is non-extractable and
+    //    never leaves this browser's keystore; the server only ever sees the public half.
+    const DeviceKey = {
+      keys: null,
+      spki: null,
+      supported: !!(window.crypto && window.crypto.subtle && window.indexedDB),
+      openDB() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open('shadow-irc-identity', 1);
+          req.onupgradeneeded = () => req.result.createObjectStore('keys');
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async load() {
+        if (!this.supported) return null;
+        if (this.keys) return this.keys;
+        try {
+          const db = await this.openDB();
+          let kp = await new Promise((resolve, reject) => {
+            const req = db.transaction('keys', 'readonly').objectStore('keys').get('device');
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+          });
+          if (!kp) {
+            kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
+            await new Promise((resolve, reject) => {
+              const tx = db.transaction('keys', 'readwrite');
+              tx.objectStore('keys').put(kp, 'device');
+              tx.oncomplete = resolve;
+              tx.onerror = () => reject(tx.error);
+            });
+          }
+          this.keys = kp;
+          const der = await crypto.subtle.exportKey('spki', kp.publicKey);
+          this.spki = btoa(String.fromCharCode(...new Uint8Array(der)));
+          return kp;
+        } catch (e) {
+          this.supported = false;
+          return null;
+        }
+      },
+      async sign(text) {
+        const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, this.keys.privateKey, new TextEncoder().encode(text));
+        return btoa(String.fromCharCode(...new Uint8Array(sig)));
+      },
+      async fingerprint() {
+        const der = Uint8Array.from(atob(this.spki), (c) => c.charCodeAt(0));
+        const h = await crypto.subtle.digest('SHA-256', der);
+        return [...new Uint8Array(h)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+      }
+    };
+
+    let identified = false;
+    let pendingDeviceLink = false;
+
+    function sendRaw(line) {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(line + '\r\n');
+    }
+
+    function updateIdentityBadge() {
+      const el = document.getElementById('net-status');
+      if (el && ws && ws.readyState === WebSocket.OPEN) el.innerText = 'CONNECTED // ' + myNick + (identified ? ' 🔑' : '');
+    }
+
+    async function startKeyAuth() {
+      if (!(await DeviceKey.load())) return;
+      sendRaw('NS CHALLENGE ' + DeviceKey.spki);
+    }
+
+    async function handleNickServNotice(text) {
+      const challenge = text.match(/^CHALLENGE (\S+)/);
+      if (challenge) { sendRaw('NS AUTH ' + await DeviceKey.sign(challenge[1])); return true; }
+      if (text.startsWith('UNKNOWNKEY')) {
+        addMsg('status', '🔑 This device is not linked to ' + myNick + ' yet — click Register to link it.', 'system');
+        return true;
+      }
+      if (/is not registered/.test(text) && !pendingDeviceLink) {
+        addMsg('status', '🔑 ' + myNick + ' is not registered — click Register to claim it with this device\'s key.', 'system');
+        return false;
+      }
+      if (/already registered/.test(text) && pendingDeviceLink) {
+        const pass = prompt(myNick + ' is already registered. Enter its password once to link this device:');
+        if (pass) sendRaw('NS IDENTIFY ' + pass); else pendingDeviceLink = false;
+        return false;
+      }
+      if (/now identified for/.test(text)) {
+        identified = true;
+        updateIdentityBadge();
+        if (pendingDeviceLink) { pendingDeviceLink = false; sendRaw('NS ADDKEY ' + DeviceKey.spki); }
+        return false;
+      }
+      if (/Password incorrect/.test(text)) pendingDeviceLink = false;
+      return false;
+    }
+
     // 1. Deep-space backdrop: nebula clouds, realistic starfield, occasional meteors
     const canvas = document.getElementById('nebula');
     const ctx = canvas.getContext('2d');
@@ -1187,6 +1284,8 @@
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
+          identified = false;
+          pendingDeviceLink = false;
           document.getElementById('net-status').innerText = 'CONNECTED // ' + myNick;
           document.getElementById('status-indicator').classList.remove('offline');
 
@@ -1212,6 +1311,16 @@
 
           if (line.startsWith('PING')) {
             ws.send('PONG ' + line.substring(5) + '\r\n');
+            return;
+          }
+
+          if (line.includes(' 001 ')) startKeyAuth();
+
+          const serviceNotice = line.match(/^:(NickServ|ChanServ|MemoServ|HostServ)!\S+ NOTICE \S+ :(.*)$/i);
+          if (serviceNotice) {
+            const from = serviceNotice[1], text = serviceNotice[2];
+            if (from.toLowerCase() === 'nickserv' && await handleNickServNotice(text)) return;
+            addMsg('status', '🛡️ ' + from + ': ' + text, 'system');
             return;
           }
 
@@ -1522,6 +1631,9 @@
         channelKeys.delete(currentWindow.toLowerCase());
         updateE2eeStatus();
         addMsg(currentWindow, '🔓 E2EE disabled for ' + currentWindow, 'system');
+      } else if (/^\/(ns|nickserv)\s+(registerkey|addkey)\s*$/i.test(val)) {
+        if (/registerkey/i.test(val)) return promptRegisterNick();
+        if (await DeviceKey.load()) sendRaw('NS ADDKEY ' + DeviceKey.spki);
       } else if (val.startsWith('/')) {
         const cmdKey = val.trim().toLowerCase();
         if (customCmds[cmdKey]) {
@@ -1532,7 +1644,8 @@
           addMsg(target, replyText, 'chat', myNick, isDm);
         } else {
           if (ws && ws.readyState === WebSocket.OPEN) ws.send(val.substring(1) + '\r\n');
-          addMsg('status', 'EXEC: ' + val, 'system');
+          const masked = val.replace(/^(\/(?:ns|nickserv|msg\s+nickserv)\s+(?:(?:identify|register)\s+|ghost\s+\S+\s+))(\S+)/i, '$1••••••');
+          addMsg('status', 'EXEC: ' + masked, 'system');
         }
       } else {
         const chanKey = channelKeys.get(target.toLowerCase());
@@ -1569,7 +1682,7 @@
       }
       document.getElementById('superview-modal').style.display = show ? 'flex' : 'none';
       if (show) {
-        execOperCmd('/oper Shadow cosmicsecret');
+        execOperCmd('/oper');
         renderCustomCommandsList();
         document.getElementById('super-e2ee-val').innerText = 'AES-256-GCM (' + channelKeys.size + ' active)';
       }
@@ -1668,12 +1781,16 @@
       if (name) sendQuickCmd('/join ' + name);
     }
 
-    function promptRegisterNick() {
-      const pass = prompt('Enter a password to register your nickname (' + myNick + ') with NickServ:\n(Zero email or phone number required!)');
+    async function promptRegisterNick() {
+      if (await DeviceKey.load()) {
+        pendingDeviceLink = true;
+        sendRaw('NS REGISTERKEY ' + DeviceKey.spki);
+        addMsg('status', '🔑 Binding ' + myNick + ' to this device\'s key (' + await DeviceKey.fingerprint() + '). No password, no email — the key never leaves this browser.', 'system');
+        return;
+      }
+      const pass = prompt('This browser cannot store a device key. Enter a password to register ' + myNick + ' with NickServ:');
       if (pass) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send('PRIVMSG NickServ :REGISTER ' + pass + '\r\n');
-        }
+        sendRaw('PRIVMSG NickServ :REGISTER ' + pass);
         addMsg('status', '🛡️ Sent NickServ registration request for ' + myNick, 'system');
       }
     }
