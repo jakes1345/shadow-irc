@@ -31,6 +31,25 @@ import { BanEngine } from './banEngine.js';
  *  - Wildcard & CIDR Ban Mask Engine (+b)
  */
 
+// Cloudflare published egress ranges (https://www.cloudflare.com/ips-v4).
+// Only trust CF-Connecting-IP / X-Real-IP when the raw TCP peer is actually CF.
+const CF_RANGES = [
+  '173.245.48.', '103.21.244.', '103.22.200.', '103.31.4.',
+  '141.101.64.', '108.162.192.', '190.93.240.', '188.114.96.',
+  '197.234.240.', '198.41.128.', '162.158.', '104.16.',
+  '104.17.', '104.18.', '104.19.', '104.20.', '104.21.',
+  '104.22.', '104.23.', '104.24.', '104.25.', '104.26.',
+  '104.27.', '172.64.', '172.65.', '172.66.', '172.67.',
+  '172.68.', '172.69.', '172.70.', '172.71.', '131.0.72.',
+];
+
+function resolveClientIp(req) {
+  const peer = req.socket.remoteAddress || '';
+  const isCF = CF_RANGES.some((pfx) => peer.includes(pfx));
+  if (isCF) return req.headers['cf-connecting-ip'] || peer;
+  return peer;
+}
+
 class ShadowIRCServer {
   constructor(options = {}) {
     this.port = options.port || (process.env.TCP_PORT ? parseInt(process.env.TCP_PORT, 10) : 6667);
@@ -113,8 +132,8 @@ class ShadowIRCServer {
   }
 
   handleWsConnection(ws, req) {
-    // Prefer CF-Connecting-IP so real client IP survives the Cloudflare proxy
-    const ip = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.socket.remoteAddress;
+    // Only trust CF-Connecting-IP when the TCP peer is a verified Cloudflare egress IP
+    const ip = resolveClientIp(req);
     const client = this.createClientState(ws, ip, 'WebSocket');
 
     ws.on('message', (message) => {
