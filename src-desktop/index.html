@@ -693,6 +693,7 @@
     </div>
 
     <div class="header-stats">
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(157, 78, 221, 0.25); border-color: var(--accent-violet); color: #fff;" onclick="toggleSuperViewModal(true)">👑 Super-View</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(255, 0, 127, 0.2); border-color: var(--accent-magenta); color: #fff;" onclick="toggleGuideModal(true)">❓ Guide & Tour</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptChangeServerNode()">🌐 Server Node</button>
       <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
@@ -1241,8 +1242,17 @@
         document.getElementById('e2ee-status').innerText = 'KEY SET (' + encryptionKey + ')';
         addMsg(currentWindow, '🔒 E2EE Key set to "' + encryptionKey + '"', 'system');
       } else if (val.startsWith('/')) {
-        if (ws && ws.readyState === WebSocket.OPEN) ws.send(val.substring(1) + '\r\n');
-        addMsg('status', 'EXEC: ' + val, 'system');
+        const cmdKey = val.trim().toLowerCase();
+        if (customCmds[cmdKey]) {
+          const replyText = customCmds[cmdKey];
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send('PRIVMSG ' + target + ' :' + replyText + '\r\n');
+          }
+          addMsg(target, replyText, 'chat', myNick, isDm);
+        } else {
+          if (ws && ws.readyState === WebSocket.OPEN) ws.send(val.substring(1) + '\r\n');
+          addMsg('status', 'EXEC: ' + val, 'system');
+        }
       } else {
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send('PRIVMSG ' + target + ' :' + val + '\r\n');
@@ -1251,7 +1261,166 @@
       }
     }
 
-    function sendQuickCmd(cmdStr) {
+  <!-- Super-View Operator Command Center Modal Overlay -->
+  <div id="superview-modal" class="modal-overlay" style="display:none; align-items:center; justify-content:center;">
+    <div class="modal-card" style="width: 820px; max-width: 92vw; max-height: 88vh; overflow-y: auto;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 14px;">
+        <div style="display:flex; align-items:center; gap: 10px;">
+          <span style="font-size:24px;">👑</span>
+          <div>
+            <h3 style="margin:0; font-family:var(--font-heading); color: var(--accent-cyan);">SUPER-VIEW OPERATOR COMMAND CENTER</h3>
+            <span style="font-size: 11px; color: var(--text-muted);">Godmode Telemetry, Dynamic Command Customizer & Network Controls</span>
+          </div>
+        </div>
+        <button class="close-btn" onclick="toggleSuperViewModal(false)">✖</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0;">
+        <div style="background: rgba(0, 243, 255, 0.08); border: 1px solid var(--accent-cyan); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--accent-cyan); font-weight: 700;">NETWORK NODE</div>
+          <div style="font-size: 14px; font-weight: 700; margin-top: 4px;" id="super-node-val">shadowspace.space</div>
+        </div>
+        <div style="background: rgba(157, 78, 221, 0.08); border: 1px solid var(--accent-violet); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--accent-violet); font-weight: 700;">OPERATOR PRIVILEGES</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--accent-green); margin-top: 4px;">👑 OperServ (+o)</div>
+        </div>
+        <div style="background: rgba(255, 0, 127, 0.08); border: 1px solid var(--accent-magenta); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--accent-magenta); font-weight: 700;">E2EE SECURED</div>
+          <div style="font-size: 14px; font-weight: 700; margin-top: 4px;">AES-GCM / XOR</div>
+        </div>
+        <div style="background: rgba(0, 255, 157, 0.08); border: 1px solid var(--accent-green); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--accent-green); font-weight: 700;">IP MASK CLOAKING</div>
+          <div style="font-size: 14px; font-weight: 700; margin-top: 4px;">100% SHA256 Active</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="color: var(--accent-cyan); margin-bottom: 10px;">⚡ Quick Operator Actions</h4>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px;" onclick="execOperCmd('/oper admin cosmicsecret')">👑 Authenticate Oper</button>
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(157, 78, 221, 0.4);" onclick="promptGlobalBroadcast()">📢 Global Broadcast</button>
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(0, 255, 157, 0.4);" onclick="execOperCmd('/stats')">📊 Server Stats</button>
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(255, 0, 127, 0.4);" onclick="promptOperKill()">⚡ Kill User</button>
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(255, 0, 0, 0.6);" onclick="sendQuickCmd('/nuke')">🚨 Anti-Forensic Purge</button>
+        </div>
+      </div>
+
+      <div style="background: rgba(0, 0, 0, 0.5); border: 1px solid var(--glass-border); border-radius: 10px; padding: 16px;">
+        <h4 style="color: var(--accent-violet); margin-bottom: 8px;">✨ Live Dynamic Command Customizer</h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Add custom slash commands on the fly. Executing the command in chat will instantly broadcast the response!</p>
+        
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <input type="text" id="new-cmd-name" placeholder="Command (e.g. /rules)" style="flex: 1; background: rgba(12, 10, 28, 0.8); border: 1px solid var(--glass-border); color: #fff; padding: 8px; border-radius: 6px; font-family: var(--font-code); font-size: 12px;" />
+          <input type="text" id="new-cmd-reply" placeholder="Reply text message..." style="flex: 2; background: rgba(12, 10, 28, 0.8); border: 1px solid var(--glass-border); color: #fff; padding: 8px; border-radius: 6px; font-family: var(--font-code); font-size: 12px;" />
+          <button class="send-btn" style="padding: 8px 16px; font-size: 12px;" onclick="addCustomCommand()">+ ADD</button>
+        </div>
+
+        <div style="font-size: 11px; color: var(--accent-cyan); font-weight: 700; margin-bottom: 6px;">Active Custom Commands:</div>
+        <div id="custom-cmds-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto;">
+          <!-- Loaded dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentGuideStep = 1;
+    let customCmds = JSON.parse(localStorage.getItem('shadow_custom_cmds') || '{}');
+
+    // Pre-populate default custom commands if empty
+    if (Object.keys(customCmds).length === 0) {
+      customCmds = {
+        '/rules': '🌌 shadowspace.space Rules: 1. Zero personal data required. 2. All IP addresses cloaked. 3. End-to-End Encryption enabled.',
+        '/vouched': '🛡️ Verified trusted operative on shadowspace.space network.',
+        '/motd': '✨ Welcome to SHADOW-IRC v4.0 Ultimate Space Edition.'
+      };
+      localStorage.setItem('shadow_custom_cmds', JSON.stringify(customCmds));
+    }
+
+    function toggleSuperViewModal(show) {
+      document.getElementById('superview-modal').style.display = show ? 'flex' : 'none';
+      if (show) renderCustomCommandsList();
+    }
+
+    function renderCustomCommandsList() {
+      const container = document.getElementById('custom-cmds-list');
+      container.innerHTML = '';
+      Object.keys(customCmds).forEach(name => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: var(--font-code);';
+        item.innerHTML = `<div><strong style="color: var(--accent-cyan);">${name}</strong> &rarr; <span style="color: var(--text-muted);">${escapeHtml(customCmds[name])}</span></div>
+                          <button style="background: none; border: none; color: var(--accent-magenta); cursor: pointer; font-weight: bold;" onclick="deleteCustomCommand('${name}')">✖</button>`;
+        container.appendChild(item);
+      });
+    }
+
+    function addCustomCommand() {
+      let name = document.getElementById('new-cmd-name').value.trim();
+      const reply = document.getElementById('new-cmd-reply').value.trim();
+      if (!name || !reply) return alert('Please provide both command name and reply text.');
+      if (!name.startsWith('/')) name = '/' + name;
+      
+      customCmds[name.toLowerCase()] = reply;
+      localStorage.setItem('shadow_custom_cmds', JSON.stringify(customCmds));
+      document.getElementById('new-cmd-name').value = '';
+      document.getElementById('new-cmd-reply').value = '';
+      renderCustomCommandsList();
+      addMsg('status', '✨ Custom Command ' + name + ' added dynamically!', 'system');
+    }
+
+    function deleteCustomCommand(name) {
+      delete customCmds[name];
+      localStorage.setItem('shadow_custom_cmds', JSON.stringify(customCmds));
+      renderCustomCommandsList();
+    }
+
+    function execOperCmd(cmdStr) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(cmdStr.substring(1) + '\r\n');
+      }
+      addMsg('status', '👑 Oper Action Executed: ' + cmdStr, 'system');
+    }
+
+    function promptGlobalBroadcast() {
+      const msg = prompt('Enter network global broadcast message to send to all channels:');
+      if (msg) execOperCmd('/wallops ' + msg);
+    }
+
+    function promptOperKill() {
+      const target = prompt('Enter nickname of user to terminate:');
+      const reason = prompt('Enter reason for termination:', 'Operator Termination');
+      if (target) execOperCmd('/kill ' + target + ' ' + (reason || 'Oper Kill'));
+    }
+
+    function toggleGuideModal(show) {
+      document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
+      if (show) switchGuideStep(1);
+    }
+
+    function switchGuideStep(step) {
+      currentGuideStep = step;
+      for (let i = 1; i <= 5; i++) {
+        document.getElementById('gstep-' + i).style.display = i === step ? 'flex' : 'none';
+        document.getElementById('gtab-' + i).classList.toggle('active', i === step);
+      }
+      document.getElementById('step-indicator').innerText = 'Step ' + step + ' of 5';
+    }
+
+    function nextGuideStep() {
+      if (currentGuideStep < 5) switchGuideStep(currentGuideStep + 1);
+      else toggleGuideModal(false);
+    }
+
+    function prevGuideStep() {
+      if (currentGuideStep > 1) switchGuideStep(currentGuideStep - 1);
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
       document.getElementById('cmd-input').value = cmdStr;
       document.getElementById('cmd-input').focus();
     }
