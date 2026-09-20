@@ -88,6 +88,21 @@ class ShadowIRCServer {
     this.httpServer.listen(this.webPort, this.host, () => {
       console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Web client on \x1b[32mhttp://${this.host}:${this.webPort}\x1b[0m  WS on \x1b[32mws://${this.host}:${this.webPort}\x1b[0m`);
     });
+
+    // Cloudflare/Fly proxies drop idle sockets after ~100s; ping well inside that window
+    this.pingInterval = setInterval(() => this.pingClients(), 30000);
+  }
+
+  pingClients() {
+    for (const client of this.clients.values()) {
+      if (client.awaitingPong) {
+        this.send(client, 'ERROR :Closing link: Ping timeout');
+        this.closeClient(client);
+        continue;
+      }
+      client.awaitingPong = true;
+      this.send(client, `PING :${this.serverName}`);
+    }
   }
 
   handleTcpConnection(socket) {
@@ -139,6 +154,7 @@ class ShadowIRCServer {
       enabledCaps: new Set(),
       msgCount: 0,
       lastMsgReset: Date.now(),
+      awaitingPong: false,
       buffer: ''
     };
 
@@ -147,6 +163,7 @@ class ShadowIRCServer {
   }
 
   processRawInput(client, rawData) {
+    client.awaitingPong = false;
     const now = Date.now();
     if (now - client.lastMsgReset > 2000) {
       client.msgCount = 0;
@@ -178,6 +195,7 @@ class ShadowIRCServer {
 
   handleDisconnect(client, reason) {
     if (!this.clients.has(client.connection)) return;
+    if (client.shadowTimer) clearTimeout(client.shadowTimer);
 
     if (client.bouncerEnabled && client.account) {
       this.bouncer.detachSession(client, reason);
