@@ -113,7 +113,8 @@ class ShadowIRCServer {
   }
 
   handleWsConnection(ws, req) {
-    const ip = req.socket.remoteAddress;
+    // Prefer CF-Connecting-IP so real client IP survives the Cloudflare proxy
+    const ip = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.socket.remoteAddress;
     const client = this.createClientState(ws, ip, 'WebSocket');
 
     ws.on('message', (message) => {
@@ -333,6 +334,9 @@ class ShadowIRCServer {
       case 'OPER':
         this.handleOper(client);
         break;
+      case 'REALIP':
+        this.handleRealIp(client, args[0]);
+        break;
       case 'WALLOPS':
       case 'OPERWALL':
         this.handleWallops(client, args[0] || args.join(' '));
@@ -446,7 +450,7 @@ class ShadowIRCServer {
           this.send(client, `:NickServ!Services@${this.serverName} NOTICE ${client.nickname} :Identification timeout. Reclaiming nickname 'Shadow'...`);
           this.handleNick(client, guestNick);
         }
-      }, 30000);
+      }, 120000);
     }
   }
 
@@ -827,7 +831,12 @@ class ShadowIRCServer {
             this.broadcastChannel(channel, `:${client.nickname}!${client.username}@${client.hostname} MODE ${channel.name} ${adding ? '+v' : '-v'} ${targetNick.nickname}`);
             this.sendNamesReply(client, channel);
           }
-        } else if (['n', 't', 'm', 'i'].includes(char)) {
+        } else if (char === 'k') {
+          if (adding && !param) continue;
+          channel.key = adding ? param : null;
+          if (adding) channel.modes.add('k'); else channel.modes.delete('k');
+          this.broadcastChannel(channel, `:${client.nickname}!${client.username}@${client.hostname} MODE ${channel.name} ${adding ? '+k ' + param : '-k'}`);
+        } else if (['n', 't', 'm', 'i', 's'].includes(char)) {
           if (adding) channel.modes.add(char);
           else channel.modes.delete(char);
           this.broadcastChannel(channel, `:${client.nickname}!${client.username}@${client.hostname} MODE ${channel.name} ${adding ? '+' : '-'}${char}`);
@@ -849,9 +858,35 @@ class ShadowIRCServer {
       if (target.isOper) {
         this.send(client, `:${this.serverName} 313 ${client.nickname} ${target.nickname} :is an IRC operator`);
       }
+      // Opers see real IP regardless of cloak/VPN/Cloudflare
+      if (client.isOper) {
+        this.send(client, `:${this.serverName} 320 ${client.nickname} ${target.nickname} :Real IP: ${target.ip || 'unknown'} [type: ${target.type}]`);
+      }
       this.send(client, `:${this.serverName} 318 ${client.nickname} ${target.nickname} :End of /WHOIS list`);
     } else {
       this.send(client, `:${this.serverName} 401 ${client.nickname} ${targetNick} :No such nick/channel`);
+    }
+  }
+
+  handleRealIp(client, targetNick) {
+    if (!client.isOper) {
+      this.send(client, `:${this.serverName} 481 ${client.nickname} :Permission Denied — identify as Network Master first`);
+      return;
+    }
+    if (targetNick) {
+      const target = this.nicknames.get(targetNick.toLowerCase());
+      if (!target) { this.send(client, `:${this.serverName} 401 ${client.nickname} ${targetNick} :No such nick`); return; }
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[REALIP] ${target.nickname} (${target.username}@${target.hostname}) → ${target.ip || 'unknown'} [${target.type}]`);
+    } else {
+      // List all connected users with real IPs
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[REALIP] === Network Intelligence Report ===`);
+      for (const c of this.clients.values()) {
+        if (c.registered) {
+          const id = c.identified ? `✓ ${c.account}` : '○ unidentified';
+          this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[REALIP] ${c.nickname} (${c.username}@${c.hostname}) → ${c.ip || 'unknown'} [${c.type}] [${id}]`);
+        }
+      }
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[REALIP] === End Report (${this.clients.size} connections) ===`);
     }
   }
 
@@ -870,6 +905,7 @@ class ShadowIRCServer {
 
     this.send(client, `:${this.serverName} 321 ${client.nickname} Channel :Users Name`);
     for (const channel of this.channels.values()) {
+      if (channel.modes.has('s') && !channel.members.has(client) && !client.isOper) continue;
       this.send(client, `:${this.serverName} 322 ${client.nickname} ${channel.name} ${channel.members.size} :${channel.topic}`);
     }
     this.send(client, `:${this.serverName} 323 ${client.nickname} :End of /LIST`);
