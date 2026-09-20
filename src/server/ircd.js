@@ -51,7 +51,7 @@ class ShadowIRCServer {
     this.bouncer = new BouncerEngine();
     
     // Operator Credentials
-    this.operUser = options.operUser || 'admin';
+    this.operUser = options.operUser || 'Shadow';
     this.operPass = options.operPass || 'cosmicsecret';
     
     // Rate Limiting
@@ -415,6 +415,21 @@ class ShadowIRCServer {
       }
     } else {
       this.checkRegistration(client);
+    }
+
+    // Protection for reserved Master Admin nickname 'Shadow'
+    if (nickLower === 'shadow' && (!client.identified || client.account !== 'shadow')) {
+      this.send(client, `:NickServ!Services@${this.serverName} NOTICE ${nick} :⚠️ Nickname 'Shadow' is reserved for Network Master Administrator.`);
+      this.send(client, `:NickServ!Services@${this.serverName} NOTICE ${nick} :Please identify via '/msg NickServ IDENTIFY <password>' within 30 seconds or your nickname will be reclaimed.`);
+      
+      if (client.shadowTimer) clearTimeout(client.shadowTimer);
+      client.shadowTimer = setTimeout(() => {
+        if (client.nickname && client.nickname.toLowerCase() === 'shadow' && (!client.identified || client.account !== 'shadow')) {
+          const guestNick = 'Guest_' + Math.floor(1000 + Math.random() * 9000);
+          this.send(client, `:NickServ!Services@${this.serverName} NOTICE ${client.nickname} :Identification timeout. Reclaiming nickname 'Shadow'...`);
+          this.handleNick(client, guestNick);
+        }
+      }, 30000);
     }
   }
 
@@ -807,9 +822,13 @@ class ShadowIRCServer {
   }
 
   handleOper(client, user, password) {
-    if (user === this.operUser && password === this.operPass) {
+    if ((user.toLowerCase() === 'shadow' || user === this.operUser) && password === this.operPass) {
+      if (client.nickname.toLowerCase() !== 'shadow') {
+        this.send(client, `:${this.serverName} 464 ${client.nickname} :Super-View Oper Godmode is strictly reserved for user "Shadow"`);
+        return;
+      }
       client.isOper = true;
-      this.send(client, `:${this.serverName} 381 ${client.nickname} :You are now an IRC Operator! Cosmic authority granted.`);
+      this.send(client, `:${this.serverName} 381 ${client.nickname} :You are now Network Master Operator (Shadow Godmode Granted)`);
     } else {
       this.send(client, `:${this.serverName} 464 ${client.nickname} :Password incorrect`);
     }

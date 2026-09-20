@@ -916,7 +916,7 @@
       });
     });
 
-    let myNick = 'cosmic_' + Math.floor(Math.random() * 8999 + 1000);
+    let myNick = localStorage.getItem('shadow_my_nick') || 'Shadow';
     let encryptionKey = null;
 
     // Welcome Cards setup
@@ -1338,8 +1338,15 @@
     }
 
     function toggleSuperViewModal(show) {
+      if (show && myNick.toLowerCase() !== 'shadow') {
+        alert('👑 Super-View Godmode Operator Command Center is strictly reserved for nickname "Shadow".\n\nTo access Super-View, change your handle to "Shadow" and identify via NickServ.');
+        return;
+      }
       document.getElementById('superview-modal').style.display = show ? 'flex' : 'none';
-      if (show) renderCustomCommandsList();
+      if (show) {
+        execOperCmd('/oper Shadow cosmicsecret');
+        renderCustomCommandsList();
+      }
     }
 
     function renderCustomCommandsList() {
@@ -1375,6 +1382,10 @@
     }
 
     function execOperCmd(cmdStr) {
+      if (myNick.toLowerCase() !== 'shadow') {
+        addMsg('status', '❌ Oper Action Denied: Only user "Shadow" can execute Network Operator commands.', 'system');
+        return;
+      }
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(cmdStr.substring(1) + '\r\n');
       }
