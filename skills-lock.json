@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "namecheap-domains": {
+      "source": "clasen/skills",
+      "sourceType": "github",
+      "skillPath": "namecheap-domains/SKILL.md",
+      "computedHash": "599ac9de78619bdf67439ccc1eaa648129b3402df5b70021306c7c91e4d10bf4"
+    }
+  }
+}
