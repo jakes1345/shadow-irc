@@ -33,8 +33,8 @@ import { BanEngine } from './banEngine.js';
 
 class ShadowIRCServer {
   constructor(options = {}) {
-    this.port = options.port || 6667;
-    this.webPort = options.webPort || 8888;
+    this.port = options.port || (process.env.TCP_PORT ? parseInt(process.env.TCP_PORT, 10) : 6667);
+    this.webPort = options.webPort || (process.env.PORT ? parseInt(process.env.PORT, 10) : 8888);
     this.host = options.host || '0.0.0.0';
     this.serverName = options.serverName || 'shadowspace.space';
     this.version = 'shadow-ircd-4.0.0-cosmic-space';
