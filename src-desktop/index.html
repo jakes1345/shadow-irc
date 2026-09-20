@@ -476,6 +476,51 @@
 
     li.user-item.op { color: #ffffff; font-weight: 600; }
     li.user-item.voice { color: var(--accent-green); }
+    li.user-item.ignored { opacity: 0.4; text-decoration: line-through; }
+
+    .msg-nick { cursor: pointer; }
+    .msg-nick:hover { text-decoration: underline; }
+
+    /* User popover menu */
+    #user-menu {
+      position: fixed;
+      z-index: 500;
+      min-width: 190px;
+      background: rgba(8, 10, 22, 0.96);
+      border: 1px solid var(--glass-border-bright);
+      border-radius: 10px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 20px var(--accent-cyan-glow);
+      padding: 6px;
+      display: none;
+      font-family: var(--font-ui);
+    }
+    #user-menu .um-head {
+      padding: 8px 10px 6px;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 13px;
+      color: #fff;
+      border-bottom: 1px solid var(--glass-border);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #user-menu .um-head small { font-weight: 500; color: var(--text-dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+    #user-menu .um-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+    #user-menu .um-item:hover { background: var(--bg-card-hover); color: var(--accent-cyan); }
+    #user-menu .um-item.danger:hover { color: var(--accent-magenta); }
+    #user-menu .um-item span:first-child { width: 18px; text-align: center; }
+    #user-menu .um-sep { height: 1px; background: var(--glass-border); margin: 4px 6px; }
 
     /* Bottom Command Prompt Bar */
     #prompt-bar-container {
@@ -678,6 +723,7 @@
 <body>
   <!-- Deep Space Dynamic Nebula Shader Canvas -->
   <canvas id="nebula"></canvas>
+<div id="user-menu"></div>
 
   <!-- Header -->
   <header>
@@ -1274,9 +1320,12 @@
     addMsg('ChanServ', '👑 ChanServ Channel Engine. Click buttons below to REGISTER channel ownership or manage OP access.', 'system', 'ChanServ', true);
 
     function connectWebSocket() {
-      const defaultWs = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-        ? `ws://${location.host}`
-        : `wss://${location.host}`;
+      const isTauri = !!window.__TAURI_INTERNALS__ || location.protocol === 'tauri:' || /\.localhost$/.test(location.hostname);
+      const defaultWs = isTauri
+        ? 'wss://app.shadowspace.space'
+        : (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+          ? `ws://${location.host}`
+          : `wss://${location.host}`;
       const wsUrl = localStorage.getItem('shadow_server_addr') || defaultWs;
       document.getElementById('net-status').innerText = 'CONNECTING TO ' + wsUrl + '...';
 
@@ -1316,11 +1365,59 @@
 
           if (line.includes(' 001 ')) startKeyAuth();
 
+          const whois = line.match(/^:\S+ (311|319|313|318) /);
+          if (whois && handleWhoisNumeric(whois[1], line)) return;
+
           const serviceNotice = line.match(/^:(NickServ|ChanServ|MemoServ|HostServ)!\S+ NOTICE \S+ :(.*)$/i);
           if (serviceNotice) {
             const from = serviceNotice[1], text = serviceNotice[2];
             if (from.toLowerCase() === 'nickserv' && await handleNickServNotice(text)) return;
             addMsg('status', '🛡️ ' + from + ': ' + text, 'system');
+            return;
+          }
+
+          const evt = line.match(/^:([^!\s]+)!\S+ (JOIN|PART|KICK|MODE|QUIT|NICK)(?: (.*))?$/);
+          if (evt) {
+            const [, who, cmd] = evt;
+            let rest = evt[3] || '';
+            let trailing = '';
+            if (rest.startsWith(':')) { trailing = rest.slice(1); rest = ''; }
+            else { const ti = rest.indexOf(' :'); if (ti !== -1) { trailing = rest.slice(ti + 2); rest = rest.slice(0, ti); } }
+            const params = rest ? rest.split(' ') : [];
+            const chan = params[0] || trailing;
+            const a2 = params[1];
+            const modeStr = params.slice(1).join(' ');
+            const isMe = who.toLowerCase() === myNick.toLowerCase();
+            const channelWins = [...windows.keys()].filter((w) => w.startsWith('#'));
+            if (cmd === 'JOIN') {
+              if (!isMe) addMsg(chan, '→ ' + who + ' joined', 'system');
+              refreshNames(chan);
+            } else if (cmd === 'PART') {
+              addMsg(chan, '← ' + who + ' left' + (trailing ? ' (' + trailing + ')' : ''), 'system');
+              refreshNames(chan);
+            } else if (cmd === 'KICK') {
+              const victim = a2 || '';
+              addMsg(chan, '👢 ' + victim + ' was kicked by ' + who + (trailing ? ' (' + trailing + ')' : ''), 'system');
+              if (victim.toLowerCase() === myNick.toLowerCase()) addMsg('status', '👢 You were kicked from ' + chan + '. /join ' + chan + ' to return.', 'system');
+              refreshNames(chan);
+            } else if (cmd === 'MODE') {
+              if (chan.startsWith('#')) {
+                addMsg(chan, '⚡ ' + who + ' sets ' + (modeStr || trailing), 'system');
+                refreshNames(chan);
+              }
+            } else if (cmd === 'QUIT') {
+              channelWins.forEach((w) => {
+                const win = windows.get(w);
+                if (win.users && [...win.users].some((u) => u.replace(/^[@+]/, '').toLowerCase() === who.toLowerCase())) {
+                  addMsg(w, '← ' + who + ' quit' + (trailing ? ' (' + trailing + ')' : ''), 'system');
+                  refreshNames(w);
+                }
+              });
+            } else if (cmd === 'NICK') {
+              const newNick = params[0] || trailing;
+              if (isMe) { myNick = newNick; identified = false; updateIdentityBadge(); }
+              channelWins.forEach((w) => { addMsg(w, '✎ ' + who + ' is now known as ' + newNick, 'system'); refreshNames(w); });
+            }
             return;
           }
 
@@ -1409,6 +1506,7 @@
     connectWebSocket();
 
     function addMsg(winName, body, type = 'chat', sender = 'System', isDm = false) {
+      if ((type === 'chat' || type === 'action') && ignored.has(String(sender).replace(/^[@+]/, '').toLowerCase())) return;
       if (!windows.has(winName)) {
         windows.set(winName, { title: winName, messages: [], users: new Set(), unread: 0, topic: isDm ? ('Direct Message with ' + winName) : 'Cosmic Channel', isDm });
         createTabElement(winName, isDm);
@@ -1455,6 +1553,127 @@
           badge.style.display = 'none';
         }
       }
+    }
+
+    // ---- User menu (click / right-click a nick) ----
+    const ignored = new Set(JSON.parse(localStorage.getItem('shadow_ignored') || '[]'));
+
+    function toggleIgnore(nick) {
+      const key = nick.toLowerCase();
+      if (ignored.has(key)) ignored.delete(key); else ignored.add(key);
+      localStorage.setItem('shadow_ignored', JSON.stringify([...ignored]));
+      addMsg(currentWindow, (ignored.has(key) ? '🔇 Ignoring ' : '🔊 No longer ignoring ') + nick, 'system');
+      const win = windows.get(currentWindow);
+      if (win) renderUsers(win.users);
+    }
+
+    const namesTimers = new Map();
+    function refreshNames(chan) {
+      clearTimeout(namesTimers.get(chan));
+      namesTimers.set(chan, setTimeout(() => sendRaw('NAMES ' + chan), 250));
+    }
+
+    function amOpIn(chan) {
+      const win = windows.get(chan);
+      return !!(win && win.users && win.users.has('@' + myNick));
+    }
+
+    function closeUserMenu() {
+      document.getElementById('user-menu').style.display = 'none';
+    }
+
+    function openUserMenu(rawNick, ev) {
+      if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+      const nick = String(rawNick).replace(/^[@+]/, '');
+      if (!nick || nick === 'SYSTEM' || nick === 'System') return;
+
+      const inChannel = currentWindow.startsWith('#');
+      const win = windows.get(currentWindow);
+      const entry = win && win.users ? [...win.users].find((u) => u.replace(/^[@+]/, '').toLowerCase() === nick.toLowerCase()) : null;
+      const isOp = !!entry && entry.startsWith('@');
+      const isVoice = !!entry && entry.startsWith('+');
+      const isSelf = nick.toLowerCase() === myNick.toLowerCase();
+      const canMod = inChannel && amOpIn(currentWindow) && !isSelf;
+      const isIgnored = ignored.has(nick.toLowerCase());
+
+      const items = [];
+      if (!isSelf) items.push(['💬', 'Message', () => openDirectMessage(nick)]);
+      items.push(['👤', 'Whois', () => sendRaw('WHOIS ' + nick)]);
+      if (inChannel && !isSelf) items.push(['@', 'Mention', () => {
+        const input = document.getElementById('cmd-input');
+        input.value = nick + ': ' + input.value;
+        input.focus();
+      }]);
+      if (!isSelf) items.push(['📨', 'Leave memo', () => {
+        const text = prompt('Memo for ' + nick + ' (delivered when they next identify):');
+        if (text) sendRaw('MS SEND ' + nick + ' ' + text);
+      }]);
+      if (!isSelf) items.push([isIgnored ? '🔊' : '🔇', isIgnored ? 'Unignore' : 'Ignore', () => toggleIgnore(nick)]);
+      if (canMod) {
+        items.push(null);
+        items.push([isOp ? '⬇' : '⬆', isOp ? 'Take op' : 'Give op', () => sendRaw('MODE ' + currentWindow + (isOp ? ' -o ' : ' +o ') + nick)]);
+        items.push([isVoice ? '🔈' : '🎤', isVoice ? 'Devoice' : 'Voice', () => sendRaw('MODE ' + currentWindow + (isVoice ? ' -v ' : ' +v ') + nick)]);
+        items.push(['👢', 'Kick', () => {
+          const reason = prompt('Kick ' + nick + ' from ' + currentWindow + ' — reason:', 'Bye');
+          if (reason !== null) sendRaw('KICK ' + currentWindow + ' ' + nick + ' :' + reason);
+        }, 'danger']);
+        items.push(['🚫', 'Ban + kick', () => {
+          if (!confirm('Ban ' + nick + ' from ' + currentWindow + '?')) return;
+          sendRaw('MODE ' + currentWindow + ' +b ' + nick + '!*@*');
+          sendRaw('KICK ' + currentWindow + ' ' + nick + ' :Banned');
+        }, 'danger']);
+      }
+
+      const menu = document.getElementById('user-menu');
+      const role = isSelf ? 'you' : isOp ? 'operator' : isVoice ? 'voiced' : inChannel ? 'member' : '';
+      menu.innerHTML = '<div class="um-head"><span>' + escapeHtml(nick) + '</span><small>' + role + '</small></div>';
+      items.forEach((it, i) => {
+        if (!it) { const sep = document.createElement('div'); sep.className = 'um-sep'; menu.appendChild(sep); return; }
+        const el = document.createElement('div');
+        el.className = 'um-item' + (it[3] ? ' ' + it[3] : '');
+        el.innerHTML = '<span>' + it[0] + '</span><span>' + it[1] + '</span>';
+        el.onclick = () => { closeUserMenu(); it[2](); };
+        menu.appendChild(el);
+      });
+
+      menu.style.display = 'block';
+      const x = ev ? ev.clientX : window.innerWidth / 2;
+      const y = ev ? ev.clientY : window.innerHeight / 2;
+      const r = menu.getBoundingClientRect();
+      menu.style.left = Math.min(x, window.innerWidth - r.width - 8) + 'px';
+      menu.style.top = Math.min(y, window.innerHeight - r.height - 8) + 'px';
+    }
+
+    document.addEventListener('click', (e) => { if (!e.target.closest('#user-menu')) closeUserMenu(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeUserMenu(); });
+
+    // WHOIS replies are assembled into one readable line
+    const whoisBuf = new Map();
+    function handleWhoisNumeric(num, line) {
+      const m = line.match(/^:\S+ \d{3} \S+ (\S+)(?: (.*))?$/);
+      if (!m) return false;
+      const nick = m[1];
+      const rest = m[2] || '';
+      const info = whoisBuf.get(nick.toLowerCase()) || { nick };
+      if (num === '311') {
+        const p = rest.match(/^(\S+) (\S+) \* :(.*)$/);
+        if (p) { info.user = p[1]; info.host = p[2]; info.realname = p[3]; }
+      } else if (num === '319') {
+        info.channels = rest.replace(/^:/, '');
+      } else if (num === '313') {
+        info.oper = true;
+      } else if (num === '318') {
+        whoisBuf.delete(nick.toLowerCase());
+        const bits = [];
+        if (info.user) bits.push(info.user + '@' + info.host);
+        if (info.realname) bits.push('"' + info.realname + '"');
+        if (info.channels) bits.push('in ' + info.channels);
+        if (info.oper) bits.push('★ IRC operator');
+        addMsg(currentWindow, '👤 ' + info.nick + ' — ' + (bits.join(' · ') || 'no details'), 'system');
+        return true;
+      }
+      whoisBuf.set(nick.toLowerCase(), info);
+      return true;
     }
 
     function openDirectMessage(targetNick) {
@@ -1528,13 +1747,16 @@
         const isVoice = m.sender.startsWith('+');
         const avatarLetter = m.sender.replace(/[@+]/g, '').charAt(0).toUpperCase() || 'S';
 
+        const nickAttr = escapeHtml(m.sender.replace(/^[@+]/, '')).replace(/'/g, '&#39;');
+        const nickHandlers = `onclick="openUserMenu('${nickAttr}', event)" oncontextmenu="openUserMenu('${nickAttr}', event)"`;
+
         if (m.type === 'action') {
           return `
             <div class="msg-card action">
               <div class="msg-avatar">${avatarLetter}</div>
               <div class="msg-content">
                 <div class="msg-header">
-                  <span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}">${escapeHtml(m.sender)}</span>
+                  <span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}" ${nickHandlers}>${escapeHtml(m.sender)}</span>
                   <span class="msg-time">[${m.time}]</span>
                 </div>
                 <div class="msg-body">${escapeHtml(m.body)}</div>
@@ -1558,7 +1780,7 @@
               <div class="msg-avatar">${avatarLetter}</div>
               <div class="msg-content">
                 <div class="msg-header">
-                  <span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}">${escapeHtml(m.sender)}</span>
+                  <span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}" ${nickHandlers}>${escapeHtml(m.sender)}</span>
                   <span class="msg-time">[${m.time}]</span>
                 </div>
                 <div class="msg-body">${escapeHtml(m.body)}</div>
@@ -1575,18 +1797,22 @@
       const userListEl = document.getElementById('user-list');
       const userCountEl = document.getElementById('user-count');
       
-      const arr = userSet && userSet.size > 0 ? Array.from(userSet) : ['@' + myNick, '@CosmicAI', '+StardustBot'];
+      const arr = userSet && userSet.size > 0 ? Array.from(userSet) : [myNick];
       userCountEl.innerText = arr.length;
+      const rank = (u) => (u.startsWith('@') ? 0 : u.startsWith('+') ? 1 : 2);
+      arr.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
       userListEl.innerHTML = arr.map(u => {
-        const clean = u.replace(/[@+]/g, '');
+        const clean = u.replace(/^[@+]/, '');
         const isOp = u.startsWith('@');
         const isVoice = u.startsWith('+');
+        const isIgnored = ignored.has(clean.toLowerCase());
+        const attr = escapeHtml(clean).replace(/'/g, '&#39;');
         return `
-          <li class="user-item ${isOp?'op':(isVoice?'voice':'')}" onclick="openDirectMessage('${clean}')" title="Click to send Direct Message (DM) to ${clean}">
+          <li class="user-item ${isOp?'op':(isVoice?'voice':'')}${isIgnored ? ' ignored' : ''}" onclick="openUserMenu('${attr}', event)" oncontextmenu="openUserMenu('${attr}', event)" title="${attr}">
             <div class="user-role-dot"></div>
             <span>${escapeHtml(u)}</span>
-            <span style="font-size: 10px; color: var(--accent-cyan); opacity: 0.6; margin-left: auto;">💬 DM</span>
+            <span style="font-size: 11px; color: var(--text-dim); margin-left: auto;">⋯</span>
           </li>`;
       }).join('');
     }
@@ -1806,12 +2032,13 @@
     }
 
     function promptChangeServerNode() {
-      const current = localStorage.getItem('shadow_server_addr') || 'ws://shadowspace.space:8888';
-      const newAddr = prompt('Enter SHADOW-IRC Server Node IP/URL for you and your friends to connect:\n(e.g. ws://shadowspace.space:8888 or ws://YOUR_SERVER_IP:8888)', current);
+      const current = localStorage.getItem('shadow_server_addr') || 'wss://app.shadowspace.space';
+      const newAddr = prompt('Enter SHADOW-IRC Server Node URL:\n(e.g. wss://app.shadowspace.space, or ws://192.168.1.5:8888 for a LAN server)', current);
       if (newAddr && newAddr.trim()) {
         let formatted = newAddr.trim();
         if (!formatted.startsWith('ws://') && !formatted.startsWith('wss://')) {
-          formatted = 'ws://' + formatted;
+          const isLocal = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(formatted);
+          formatted = (isLocal ? 'ws://' : 'wss://') + formatted;
         }
         localStorage.setItem('shadow_server_addr', formatted);
         if (ws) {
