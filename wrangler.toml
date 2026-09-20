@@ -1,0 +1,6 @@
+name = "shadow-irc-space"
+main = "src/worker.js"
+compatibility_date = "2024-09-19"
+
+[vars]
+SERVER_NAME = "shadowspace.space"
