@@ -86,7 +86,7 @@ class ShadowIRCServer {
     this.wss.on('connection', (ws, req) => this.handleWsConnection(ws, req));
 
     this.httpServer.listen(this.webPort, this.host, () => {
-      console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Native Desktop WS Bridge on \x1b[32mws://${this.host}:${this.webPort}\x1b[0m \x1b[31m(Web Hosting Disabled - Tauri App & Terminal Only)\x1b[0m`);
+      console.log(`\x1b[36m[SHADOW-IRCD v4.0]\x1b[0m Web client on \x1b[32mhttp://${this.host}:${this.webPort}\x1b[0m  WS on \x1b[32mws://${this.host}:${this.webPort}\x1b[0m`);
     });
   }
 
@@ -942,8 +942,24 @@ class ShadowIRCServer {
   }
 
   handleHttpRequest(req, res) {
-    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('403 Access Denied: SHADOW-IRC does not host web sites or browser clients. Zero web hosting permitted. Use native Tauri Desktop app (npm run desktop) or Terminal TUI client (npm run client).');
+    const url = req.url === '/' ? '/index.html' : req.url;
+    const safePath = path.normalize(url).replace(/^(\.\.[/\\])+/, '');
+    const clientDir = path.join(__dirname, '..', '..', 'src-desktop');
+    const filePath = path.join(clientDir, safePath);
+
+    // Only serve files from src-desktop/
+    if (!filePath.startsWith(clientDir)) {
+      res.writeHead(403); res.end('Forbidden'); return;
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript', '.png': 'image/png', '.ico': 'image/x-icon', '.svg': 'image/svg+xml' }[ext] || 'application/octet-stream';
+
+    fs.readFile(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': mime });
+      res.end(data);
+    });
   }
 }
 
