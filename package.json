@@ -16,7 +16,8 @@
     "bot": "node src/bot/cosmicBot.js",
     "test": "node test/verify_v3.js",
     "install:icon": "python3 scripts/install_desktop_icon.py",
-    "start": "node src/server/ircd.js"
+    "start": "node src/server/ircd.js",
+    "tunnel": "cloudflared tunnel --url ws://localhost:8888"
   },
   "keywords": [
     "irc",
