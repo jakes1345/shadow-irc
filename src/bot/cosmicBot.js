@@ -88,14 +88,7 @@ class CosmicBot {
     const command = parts.shift().toUpperCase();
     const senderNick = prefix.split('!')[0];
 
-    if (command === 'JOIN') {
-      const chan = parts[0] || trailing;
-      if (senderNick !== this.nick) {
-        setTimeout(() => {
-          this.say(`🌌 Welcome ${senderNick} to ${chan}! I am CosmicAI. Type !help or chat with me!`);
-        }, 1000);
-      }
-    } else if (command === 'PRIVMSG') {
+    if (command === 'PRIVMSG') {
       const target = parts[0];
       let body = trailing;
 
@@ -127,9 +120,6 @@ class CosmicBot {
         }
       } else if (lower.startsWith('!features')) {
         this.say(`✨ Features: Tauri v2 Desktop App, 24-bit ANSI TUI, IRC Services (NickServ/ChanServ), IRCv3 History, Anti-Forensic Purge (/nuke)!`);
-      } else {
-        // Echo / Conversational AI response
-        this.say(`🌌 [CosmicAI] Received: "${body}". Systems nominal! Try typing !status or !features.`);
       }
     }
   }
