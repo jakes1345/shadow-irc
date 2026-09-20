@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌌 SHADOW // IRC [Deep Space Network]</title>
+  <title>Shadow IRC</title>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="shortcut icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
@@ -14,21 +14,21 @@
   
   <style>
     :root {
-      --bg-void: #03010a;
-      --bg-card: rgba(12, 10, 28, 0.72);
-      --bg-card-hover: rgba(22, 18, 48, 0.85);
-      --glass-border: rgba(138, 43, 226, 0.28);
-      --glass-border-bright: rgba(0, 243, 255, 0.5);
-      --accent-cyan: #00f3ff;
-      --accent-cyan-glow: rgba(0, 243, 255, 0.35);
-      --accent-violet: #9d4edd;
-      --accent-magenta: #ff007f;
-      --accent-magenta-glow: rgba(255, 0, 127, 0.35);
-      --accent-green: #00ff9d;
-      --accent-gold: #ffb703;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
+      --bg-void: #1a1d23;
+      --bg-card: #1e2127;
+      --bg-card-hover: #25282f;
+      --glass-border: #2e3338;
+      --glass-border-bright: #4f5660;
+      --accent-cyan: #4f8ef7;
+      --accent-cyan-glow: transparent;
+      --accent-violet: #5865f2;
+      --accent-magenta: #ed4245;
+      --accent-magenta-glow: transparent;
+      --accent-green: #3ba55d;
+      --accent-gold: #faa61a;
+      --text-main: #dcddde;
+      --text-muted: #b9bbbe;
+      --text-dim: #72767d;
       --font-ui: 'Outfit', sans-serif;
       --font-heading: 'Space Grotesk', sans-serif;
       --font-code: 'JetBrains Mono', monospace;
@@ -676,35 +676,137 @@
     /* Scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(138, 43, 226, 0.3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+    ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4f5660; }
+
+    /* Sleek overrides — strip neon glows */
+    canvas#nebula { display: none; }
+    body { background: var(--bg-void); }
+    header {
+      background: #16181d;
+      box-shadow: 0 1px 0 var(--glass-border);
+    }
+    .brand-title {
+      background: none;
+      -webkit-background-clip: unset;
+      -webkit-text-fill-color: var(--text-main);
+      text-shadow: none;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+    .brand-logo { box-shadow: none; border-color: var(--glass-border); }
+    .brand-tag {
+      color: var(--text-dim);
+      background: var(--bg-card-hover);
+      border-color: var(--glass-border);
+      font-size: 10px;
+    }
+    .status-dot { box-shadow: none; animation: none; }
+    .status-dot.offline { box-shadow: none; }
+    #sidebar-left { background: #16181d; border-right-color: var(--glass-border); box-shadow: none; }
+    #sidebar-right { background: #16181d; border-left-color: var(--glass-border); }
+    .sidebar-header { color: var(--text-dim); border-bottom-color: var(--glass-border); }
+    .quick-btn {
+      background: var(--bg-card-hover);
+      border-color: var(--glass-border);
+      color: var(--text-muted);
+    }
+    .quick-btn:hover { background: var(--accent-cyan); color: #fff; box-shadow: none; }
+    li.tree-item:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      border-color: transparent;
+      transform: none;
+    }
+    li.tree-item.active {
+      background: rgba(79, 142, 247, 0.15);
+      color: var(--accent-cyan);
+      border-color: rgba(79, 142, 247, 0.35);
+      box-shadow: none;
+      font-weight: 600;
+    }
+    .badge-unread { background: var(--accent-cyan); box-shadow: none; }
+    #chat-view { background: var(--bg-void); }
+    #topic-bar { background: var(--bg-card); border-bottom-color: var(--glass-border); box-shadow: none; }
+    .topic-text { color: var(--text-muted); }
+    .topic-icon { color: var(--text-dim); }
+    .msg-card {
+      background: transparent;
+      border-color: transparent;
+    }
+    .msg-card:hover { background: rgba(255,255,255,0.03); border-color: transparent; }
+    .msg-avatar {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      box-shadow: none;
+      border-radius: 50%;
+    }
+    .msg-nick { color: var(--text-main); font-weight: 600; }
+    .msg-nick.op { color: var(--accent-magenta); text-shadow: none; }
+    .msg-nick.voice { color: var(--accent-green); }
+    .msg-card.system { background: transparent; border-left-color: var(--glass-border); }
+    .msg-card.system .msg-body { color: var(--text-dim); }
+    .msg-card.action { background: transparent; border-left-color: var(--glass-border); }
+    .msg-card.action .msg-body { color: var(--text-muted); }
+    .msg-card.e2ee { background: transparent; border-color: var(--glass-border); }
+    .e2e-tag { color: var(--accent-green); background: rgba(59,165,93,0.1); border-color: var(--accent-green); }
+    .user-section-title { color: var(--text-dim); }
+    li.user-item:hover { background: var(--bg-card-hover); color: var(--text-main); }
+    li.user-item.op .user-role-dot { background: var(--accent-magenta); box-shadow: none; }
+    li.user-item.voice .user-role-dot { background: var(--accent-green); box-shadow: none; }
+    li.user-item.op { color: var(--text-main); }
+    li.user-item.voice { color: var(--text-main); }
+    #prompt-bar-container { background: #16181d; border-top-color: var(--glass-border); }
+    .chip-btn { background: var(--bg-card-hover); border-color: var(--glass-border); color: var(--text-muted); }
+    .chip-btn:hover { background: var(--bg-card); color: var(--text-main); box-shadow: none; }
+    input#cmd-input {
+      background: var(--bg-card);
+      border-color: var(--glass-border);
+      box-shadow: none;
+    }
+    input#cmd-input:focus { border-color: var(--accent-cyan); box-shadow: none; }
+    button.send-btn {
+      background: var(--accent-cyan);
+      box-shadow: none;
+      letter-spacing: 0;
+      font-weight: 600;
+    }
+    button.send-btn:hover { transform: none; box-shadow: none; filter: brightness(1.1); }
+    .modal-overlay { background: rgba(0,0,0,0.7); }
+    .modal-card { background: #1e2127; border-color: var(--glass-border); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    .modal-header h3 { color: var(--text-main); }
+    .guide-tab { background: var(--bg-card-hover); border-color: var(--glass-border); }
+    .guide-tab.active { background: var(--accent-cyan); color: #fff; box-shadow: none; }
+    .guide-content code { background: var(--bg-void); border-color: var(--glass-border); color: var(--accent-cyan); }
+    .guide-callout { background: rgba(79,142,247,0.06); border-left-color: var(--accent-cyan); color: var(--text-muted); }
+    .close-btn:hover { color: var(--text-main); }
+    .stat-pill { background: var(--bg-card-hover); border-color: var(--glass-border); }
   </style>
 </head>
 <body>
-  <!-- Deep Space Dynamic Nebula Shader Canvas -->
   <canvas id="nebula"></canvas>
 
   <!-- Header -->
   <header>
     <div class="brand">
-      <img src="logo.png" class="brand-logo" alt="SHADOW // IRC Logo" />
-      <div class="brand-title">SHADOW // IRC</div>
-      <span class="brand-tag">Deep Space Network</span>
+      <img src="logo.png" class="brand-logo" alt="Shadow IRC" />
+      <div class="brand-title">Shadow IRC</div>
+      <span class="brand-tag">v4.0</span>
     </div>
 
     <div class="header-stats">
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(157, 78, 221, 0.25); border-color: var(--accent-violet); color: #fff;" onclick="toggleSuperViewModal(true)">👑 Super-View</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(255, 0, 127, 0.2); border-color: var(--accent-magenta); color: #fff;" onclick="toggleGuideModal(true)">❓ Guide & Tour</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptChangeServerNode()">🌐 Server Node</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptIdentifyNick()">🔑 Identify</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="toggleSuperViewModal(true)">Super-View</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="toggleGuideModal(true)">Guide</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptChangeServerNode()">Server</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptRegisterNick()">Register</button>
+      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptIdentifyNick()">Identify</button>
       <div class="stat-pill">
         <div class="status-dot" id="status-indicator"></div>
-        <span id="net-status">CONNECTING...</span>
+        <span id="net-status">Connecting...</span>
       </div>
       <div class="stat-pill">
-        <span>🔒 E2EE:</span>
-        <span id="e2ee-status" style="color: var(--text-muted);">OFF (/encrypt &lt;key&gt;)</span>
+        <span>E2EE:</span>
+        <span id="e2ee-status" style="color: var(--text-muted);">Off</span>
       </div>
     </div>
   </header>
@@ -714,25 +816,25 @@
     <!-- Sidebar Left: Channels & DMs -->
     <div id="sidebar-left">
       <div class="sidebar-header">
-        <span>CHANNELS & DMS</span>
-        <button class="quick-btn" onclick="promptJoinChannel()">+ JOIN</button>
+        <span>Channels</span>
+        <button class="quick-btn" onclick="promptJoinChannel()">+ Join</button>
       </div>
 
-      <div class="tree-section-title">Public Channels</div>
+      <div class="tree-section-title">Channels</div>
       <ul class="tree-list" id="chan-list">
         <li class="tree-item active" id="tab-status" onclick="switchWindow('status')">
-          <span>🌐 # status</span>
+          <span># status</span>
         </li>
         <li class="tree-item" id="tab-#cosmos" onclick="switchWindow('#cosmos')">
-          <span>🚀 # cosmos</span>
+          <span># cosmos</span>
           <span class="badge-unread" id="unread-#cosmos" style="display:none;">0</span>
         </li>
         <li class="tree-item" id="tab-#quantum" onclick="switchWindow('#quantum')">
-          <span>⚡ # quantum</span>
+          <span># quantum</span>
           <span class="badge-unread" id="unread-#quantum" style="display:none;">0</span>
         </li>
         <li class="tree-item" id="tab-#void" onclick="switchWindow('#void')">
-          <span>🕳️ # void</span>
+          <span># void</span>
           <span class="badge-unread" id="unread-#void" style="display:none;">0</span>
         </li>
       </ul>
@@ -740,10 +842,10 @@
       <div class="tree-section-title">Direct Messages</div>
       <ul class="tree-list" id="dm-list">
         <li class="tree-item" onclick="switchWindow('NickServ')">
-          <span>🛡️ NickServ</span>
+          <span>NickServ</span>
         </li>
         <li class="tree-item" onclick="switchWindow('ChanServ')">
-          <span>👑 ChanServ</span>
+          <span>ChanServ</span>
         </li>
       </ul>
     </div>
@@ -752,12 +854,12 @@
     <div id="chat-view">
       <div id="topic-bar">
         <div class="topic-info">
-          <span class="topic-icon">✨</span>
-          <span class="topic-text" id="active-topic">Welcome to SHADOW-IRC Deep Space Cosmic Network | IRCv3 & Services Active</span>
+          <span class="topic-icon">#</span>
+          <span class="topic-text" id="active-topic">Welcome to Shadow IRC — IRCv3 &amp; Services Active</span>
         </div>
         <div class="channel-badges">
-          <span class="mode-badge">+n +t +C</span>
-          <span class="mode-badge" id="member-count-badge">1 Crew</span>
+          <span class="mode-badge">+n +t</span>
+          <span class="mode-badge" id="member-count-badge">1 online</span>
         </div>
       </div>
 
@@ -767,17 +869,17 @@
       <!-- Command Prompt Bar -->
       <div id="prompt-bar-container">
         <div class="quick-ctcp-bar">
-          <span class="chip-btn" onclick="sendQuickCmd('/me floats through the quantum void')">✨ /me action</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/ns help')">🛡️ /ns help</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/cs help')">👑 /cs help</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/encrypt cosmic_key')">🔒 /encrypt</span>
-          <span class="chip-btn" style="background: rgba(255,0,0,0.2); color: #ff4d4d; border-color: #ff4d4d;" onclick="sendQuickCmd('/nuke')">🚨 /nuke</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/clear')">🧹 /clear</span>
+          <span class="chip-btn" onclick="sendQuickCmd('/me ')">/me</span>
+          <span class="chip-btn" onclick="sendQuickCmd('/ns help')">/ns help</span>
+          <span class="chip-btn" onclick="sendQuickCmd('/cs help')">/cs help</span>
+          <span class="chip-btn" onclick="sendQuickCmd('/encrypt ')">/encrypt</span>
+          <span class="chip-btn" onclick="sendQuickCmd('/nuke')">/nuke</span>
+          <span class="chip-btn" onclick="sendQuickCmd('/clear')">/clear</span>
         </div>
 
         <div class="prompt-bar">
-          <input type="text" id="cmd-input" placeholder="Type /join #cosmos, /me floats in space, or chat message..." autofocus />
-          <button class="send-btn" onclick="sendInput()">SEND 🚀</button>
+          <input type="text" id="cmd-input" placeholder="Message or /command..." autofocus />
+          <button class="send-btn" onclick="sendInput()">Send</button>
         </div>
       </div>
     </div>
@@ -785,8 +887,8 @@
     <!-- Sidebar Right: Users / Crew -->
     <div id="sidebar-right">
       <div class="user-section-title">
-        <span>CREW / USERS</span>
-        <span id="user-count" style="color: var(--accent-cyan);">1</span>
+        <span>Members</span>
+        <span id="user-count" style="color: var(--text-dim);">1</span>
       </div>
       <ul class="user-list" id="user-list">
         <li class="user-item op">
