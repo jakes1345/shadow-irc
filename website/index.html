@@ -3,330 +3,402 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌌 SHADOW-IRC: Ultra-Private Deep Space Network Suite</title>
+  <title>Shadow IRC — Private, Open-Source IRC Network</title>
   <link rel="icon" type="image/png" href="logo.png">
-  <!-- Google Fonts: Outfit, Space Grotesk, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --bg-void: #03010a;
-      --bg-card: rgba(12, 10, 28, 0.72);
-      --glass-border: rgba(138, 43, 226, 0.28);
-      --glass-border-bright: rgba(0, 243, 255, 0.5);
-      --accent-cyan: #00f3ff;
-      --accent-cyan-glow: rgba(0, 243, 255, 0.35);
-      --accent-violet: #9d4edd;
-      --accent-magenta: #ff007f;
-      --accent-magenta-glow: rgba(255, 0, 127, 0.35);
-      --accent-green: #00ff9d;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
+      --bg: #1a1d23;
+      --bg-card: #1e2127;
+      --bg-card-hover: #25282f;
+      --border: #2e3338;
+      --accent: #4f8ef7;
+      --accent-green: #3ba55d;
+      --accent-red: #ed4245;
+      --text: #dcddde;
+      --text-muted: #b9bbbe;
+      --text-dim: #72767d;
       --font-ui: 'Outfit', sans-serif;
       --font-heading: 'Space Grotesk', sans-serif;
       --font-code: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
+
     body {
-      background: var(--bg-void);
-      color: var(--text-main);
+      background: var(--bg);
+      color: var(--text);
       font-family: var(--font-ui);
       min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    canvas#nebula {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      z-index: -1;
-      pointer-events: none;
     }
 
     header {
-      padding: 20px 40px;
+      padding: 18px 40px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--border);
+      background: #16181d;
     }
 
-    .brand { display: flex; align-items: center; gap: 14px; }
-    .brand img { width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 0 20px var(--accent-cyan-glow); }
-    .brand-title { font-family: var(--font-heading); font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand img { width: 36px; height: 36px; border-radius: 50%; }
+    .brand-name { font-family: var(--font-heading); font-size: 18px; font-weight: 700; color: var(--text); }
+    .brand-tag { font-size: 11px; color: var(--text-dim); background: var(--bg-card-hover); border: 1px solid var(--border); padding: 2px 8px; border-radius: 20px; }
+
+    .header-right { display: flex; gap: 12px; align-items: center; }
+    .nav-link { color: var(--text-muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    .nav-link:hover { color: var(--text); }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--text); }
+    .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 10px; }
 
     .hero {
-      max-width: 1000px;
-      margin: 80px auto 40px;
+      max-width: 900px;
+      margin: 90px auto 60px;
       text-align: center;
-      padding: 0 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
+      padding: 0 24px;
     }
 
-    .hero-logo {
-      width: 160px;
-      height: 160px;
-      border-radius: 50%;
-      box-shadow: 0 0 50px var(--accent-cyan-glow), 0 0 80px var(--accent-magenta-glow);
-      animation: float 4s infinite ease-in-out;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+    .hero img {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      margin-bottom: 28px;
     }
 
     h1 {
       font-family: var(--font-heading);
       font-size: 48px;
       font-weight: 700;
-      background: linear-gradient(135deg, #ffffff 30%, var(--accent-cyan) 70%, var(--accent-magenta) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      line-height: 1.2;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 20px;
     }
 
-    p.subtitle {
+    h1 span { color: var(--accent); }
+
+    .subtitle {
       font-size: 18px;
       color: var(--text-muted);
-      max-width: 720px;
+      max-width: 600px;
+      margin: 0 auto 36px;
       line-height: 1.6;
     }
 
-    .cta-buttons {
+    .cta-row {
       display: flex;
-      gap: 16px;
-      margin-top: 10px;
-      flex-wrap: wrap;
+      gap: 14px;
       justify-content: center;
+      flex-wrap: wrap;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent-magenta), var(--accent-violet));
-      color: #fff;
-      padding: 14px 32px;
-      border-radius: 12px;
-      font-family: var(--font-heading);
-      font-weight: 700;
-      font-size: 15px;
-      text-decoration: none;
-      box-shadow: 0 4px 25px var(--accent-magenta-glow);
-      transition: all 0.25s ease;
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 28px;
     }
 
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 35px var(--accent-magenta-glow);
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-green);
     }
 
-    .btn-secondary {
-      background: rgba(0, 243, 255, 0.1);
-      border: 1px solid var(--accent-cyan);
-      color: var(--accent-cyan);
-      padding: 14px 32px;
-      border-radius: 12px;
-      font-family: var(--font-heading);
-      font-weight: 700;
-      font-size: 15px;
-      text-decoration: none;
-      transition: all 0.25s ease;
-    }
-
-    .btn-secondary:hover {
-      background: var(--accent-cyan);
-      color: #000;
-      box-shadow: 0 0 25px var(--accent-cyan-glow);
-    }
-
-    .features-grid {
+    .features {
       max-width: 1100px;
-      margin: 60px auto;
+      margin: 0 auto 80px;
+      padding: 0 24px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-      padding: 0 20px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
     }
 
-    .feature-card {
+    .card {
       background: var(--bg-card);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: #4f5660; }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(79,142,247,0.12);
       display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: transform 0.25s ease, border-color 0.25s ease;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 14px;
     }
 
-    .feature-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--accent-cyan);
+    .card h3 {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 8px;
     }
 
-    .feature-icon { font-size: 28px; }
-    .feature-title { font-family: var(--font-heading); font-size: 18px; color: var(--accent-cyan); }
-    .feature-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .connect-section {
+      max-width: 900px;
+      margin: 0 auto 80px;
+      padding: 0 24px;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 28px;
+      color: #fff;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .connect-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .connect-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .connect-card h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .connect-card .step-num {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 22px;
+      margin-right: 8px;
+    }
+
+    code {
+      display: block;
+      background: #111215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: var(--font-code);
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 10px;
+      line-height: 1.8;
+    }
+
+    .clients-section {
+      max-width: 900px;
+      margin: 0 auto 80px;
+      padding: 0 24px;
+    }
+
+    .client-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .client-card { grid-template-columns: 1fr; }
+      h1 { font-size: 32px; }
+      header { padding: 14px 20px; }
+    }
+
+    .client-option h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .client-option p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .dl-btn {
+      display: block;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      border-radius: 7px;
+      text-decoration: none;
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 6px;
+      transition: all 0.2s;
+    }
+    .dl-btn:hover { border-color: var(--accent); color: var(--text); }
 
     footer {
       text-align: center;
-      padding: 40px;
-      border-top: 1px solid var(--glass-border);
-      color: var(--text-muted);
+      padding: 32px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
       font-size: 13px;
     }
+
+    footer a { color: var(--text-dim); text-decoration: none; }
+    footer a:hover { color: var(--text-muted); }
   </style>
 </head>
 <body>
-  <canvas id="nebula"></canvas>
 
   <header>
     <div class="brand">
-      <img src="logo.png" alt="SHADOW-IRC Logo">
-      <div class="brand-title">SHADOW // IRC</div>
+      <img src="logo.png" alt="Shadow IRC">
+      <span class="brand-name">Shadow IRC</span>
+      <span class="brand-tag">v4.0</span>
+    </div>
+    <div class="header-right">
+      <a href="#connect" class="nav-link">Connect</a>
+      <a href="#clients" class="nav-link">Clients</a>
+      <a href="https://app.shadowspace.space" class="btn btn-primary">Open Web Client</a>
     </div>
   </header>
 
   <div class="hero">
-    <img src="logo.png" alt="SHADOW-IRC Master Emblem" class="hero-logo">
-    <h1>Zero-Data Deep Space Anonymous IRC Suite</h1>
-    <p class="subtitle">100% Free & Open-Source (MIT). Native Tauri v2 Desktop App & 24-bit TrueColor Terminal Client. No Web Registration. No Email. No Phone. Automatic IP Cloaking.</p>
-
-    <div class="cta-buttons">
-      <a href="#downloads" class="btn-primary">🚀 Download Desktop App</a>
-      <a href="#setup" class="btn-secondary">📖 How Friends Connect</a>
+    <img src="logo.png" alt="Shadow IRC">
+    <h1>Private IRC.<br><span>No accounts. No data.</span></h1>
+    <p class="subtitle">Open-source IRC network with automatic IP cloaking, E2EE messaging, NickServ registration, and a full web client — all free.</p>
+    <div class="cta-row">
+      <a href="https://app.shadowspace.space" class="btn btn-primary btn-lg">Open Web Client</a>
+      <a href="#connect" class="btn btn-outline btn-lg">Connect with IRC Client</a>
+    </div>
+    <div class="status-badge">
+      <div class="dot"></div>
+      shadowspace.space — online
     </div>
   </div>
 
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">🛡️</div>
-      <div class="feature-title">Zero Personal Data</div>
-      <div class="feature-desc">No email address, phone number, or real name required. Registration happens 100% in-protocol via NickServ using PBKDF2 salt-hashed credentials.</div>
+  <div class="features">
+    <div class="card">
+      <div class="card-icon">🛡️</div>
+      <h3>No Personal Data</h3>
+      <p>No email, phone, or real name. Register a nickname in-protocol via NickServ with PBKDF2-hashed credentials.</p>
     </div>
-
-    <div class="feature-card">
-      <div class="feature-icon">🚨</div>
-      <div class="feature-title">Anti-Forensic Panic Switch</div>
-      <div class="feature-desc">Execute <code>/nuke</code> or <code>/panic</code> to immediately zero-fill all RAM message buffers and overwrite disk storage with cryptographic noise in &lt; 0.1s.</div>
+    <div class="card">
+      <div class="card-icon">🔒</div>
+      <h3>E2EE Messaging</h3>
+      <p>Per-channel AES-256-GCM encryption. Run <code style="display:inline;background:none;border:none;padding:0;font-size:inherit;color:var(--accent)">/encrypt &lt;key&gt;</code> to enable — compatible across web and terminal clients.</p>
     </div>
-
-    <div class="feature-card">
-      <div class="feature-icon">🔒</div>
-      <div class="feature-title">Automatic IP Cloaking</div>
-      <div class="feature-desc">All connected users automatically receive cloaked hostnames (<code>user@cosmos/shadow/x-hash</code>) to shield real IP addresses across all rooms.</div>
+    <div class="card">
+      <div class="card-icon">👻</div>
+      <h3>Automatic IP Cloaking</h3>
+      <p>All users get a cloaked hostname on connect. Your real IP is never visible to other users in any channel or DM.</p>
     </div>
-
-    <div class="feature-card">
-      <div class="feature-icon">💬</div>
-      <div class="feature-title">1-on-1 DMs & Services</div>
-      <div class="feature-desc">Full 1-on-1 Direct Messaging, built-in NickServ, ChanServ, MemoServ, HostServ, IRCv3 replay history, and ZNC 24/7 Bouncer persistence.</div>
+    <div class="card">
+      <div class="card-icon">💬</div>
+      <h3>Full IRC Services</h3>
+      <p>NickServ, ChanServ, MemoServ, HostServ, IRCv3 scrollback history, and ZNC-style session bouncer included.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🚨</div>
+      <h3>Panic Switch</h3>
+      <p>Type <code style="display:inline;background:none;border:none;padding:0;font-size:inherit;color:var(--accent)">/nuke</code> to instantly zero-fill all RAM buffers and overwrite the on-disk database with cryptographic noise.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>IRCv3 + WebSocket</h3>
+      <p>Native TCP on port 6667 for desktop IRC clients, plus a WebSocket bridge for the browser client — both on the same server.</p>
     </div>
   </div>
 
-  <section id="downloads" style="max-width: 1100px; margin: 60px auto; padding: 0 20px;">
-    <h2 style="font-family: var(--font-heading); font-size: 32px; text-align: center; margin-bottom: 30px; color: var(--accent-cyan);">🌌 Get SHADOW-IRC Client Suite</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
-      <div class="feature-card">
-        <h3 style="font-family: var(--font-heading); font-size: 20px; color: #fff;">🖥️ Native Tauri v2 Desktop App</h3>
-        <p class="feature-desc">Glassmorphism UI, dynamic canvas stardust, tray applet integration, audio chimes, and click-to-DM sidebar.</p>
-        <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
-          <a href="#" style="background: rgba(0, 243, 255, 0.15); border: 1px solid var(--accent-cyan); color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 600; font-size: 13px;">🐧 Linux (.AppImage / .deb)</a>
-          <a href="#" style="background: rgba(157, 78, 221, 0.15); border: 1px solid var(--accent-violet); color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 600; font-size: 13px;">🪟 Windows (.msi / .exe)</a>
-          <a href="#" style="background: rgba(255, 0, 127, 0.15); border: 1px solid var(--accent-magenta); color: #fff; padding: 10px 16px; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 600; font-size: 13px;">🍏 macOS (.dmg)</a>
-        </div>
+  <div class="connect-section" id="connect">
+    <h2 class="section-title">Connect</h2>
+    <div class="connect-grid">
+      <div class="connect-card">
+        <h4><span class="step-num">1</span>Pick your client</h4>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-top:6px;">Use the web client at <strong style="color:var(--text)">app.shadowspace.space</strong>, or connect with any IRC client (HexChat, WeeChat, irssi) to:</p>
+        <code>shadowspace.space:6667 (TCP / SSL 6697)<br>wss://app.shadowspace.space (WebSocket)</code>
       </div>
-
-      <div class="feature-card">
-        <h3 style="font-family: var(--font-heading); font-size: 20px; color: #fff;">💻 24-bit TrueColor Terminal TUI</h3>
-        <p class="feature-desc">Zero GUI dependencies. Runs in any SSH session or terminal emulator with Blessed-contrib dashboard styling.</p>
-        <div style="background: rgba(0, 0, 0, 0.6); padding: 12px; border-radius: 8px; font-family: var(--font-code); font-size: 12px; color: var(--accent-green); margin-top: 15px;">
-          $ git clone https://github.com/yourname/shadow-irc<br>
-          $ cd shadow-irc && npm install<br>
-          $ npm run terminal
-        </div>
+      <div class="connect-card">
+        <h4><span class="step-num">2</span>Register your nick</h4>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-top:6px;">No email needed. Once connected, register in-protocol:</p>
+        <code>/msg NickServ REGISTER &lt;password&gt;<br>/msg NickServ IDENTIFY &lt;password&gt;</code>
+      </div>
+      <div class="connect-card">
+        <h4><span class="step-num">3</span>Join or create channels</h4>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-top:6px;">Default channels are #cosmos and #quantum. Create your own anytime:</p>
+        <code>/join #yourchannel<br>/msg ChanServ REGISTER #yourchannel</code>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section id="setup" style="max-width: 1100px; margin: 60px auto; padding: 0 20px;">
-    <h2 style="font-family: var(--font-heading); font-size: 32px; text-align: center; margin-bottom: 30px; color: var(--accent-magenta);">🛰️ How Friends Connect to shadowspace.space</h2>
-    <div class="feature-card">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-        <div>
-          <h4 style="color: var(--accent-cyan); margin-bottom: 8px;">1. Connect Node Address</h4>
-          <p class="feature-desc">Set Server Node in Desktop App or Terminal to:</p>
-          <code style="display: block; background: #000; padding: 10px; border-radius: 6px; color: var(--accent-cyan); font-family: var(--font-code); margin-top: 6px;">shadowspace.space:6667 (TCP)<br>ws://shadowspace.space:8888 (WebSocket)</code>
-        </div>
-        <div>
-          <h4 style="color: var(--accent-magenta); margin-bottom: 8px;">2. Register In-Protocol (No Email)</h4>
-          <p class="feature-desc">Protect your nickname directly inside chat:</p>
-          <code style="display: block; background: #000; padding: 10px; border-radius: 6px; color: var(--accent-green); font-family: var(--font-code); margin-top: 6px;">/msg NickServ REGISTER &lt;password&gt;<br>/msg NickServ IDENTIFY &lt;password&gt;</code>
-        </div>
-        <div>
-          <h4 style="color: var(--accent-green); margin-bottom: 8px;">3. Direct Messages & Cloaking</h4>
-          <p class="feature-desc">Double click any handle or type <code>/query &lt;nick&gt;</code> to open private 1-on-1 DMs. Your IP is cloaked automatically.</p>
-        </div>
+  <div class="clients-section" id="clients">
+    <h2 class="section-title">Clients</h2>
+    <div class="client-card">
+      <div class="client-option">
+        <h3>Browser (Web Client)</h3>
+        <p>No install needed. Open the web client at <strong>app.shadowspace.space</strong> in any browser — connects automatically.</p>
+        <a href="https://app.shadowspace.space" class="btn btn-primary" style="display:block;text-align:center;">Open Web Client</a>
+      </div>
+      <div class="client-option">
+        <h3>Terminal TUI</h3>
+        <p>Full 24-bit TrueColor IRC client. Runs anywhere with Node.js — SSH sessions, servers, headless boxes.</p>
+        <code>git clone https://github.com/CoinsCommunity/shadow-irc
+cd shadow-irc && npm install
+npm run client</code>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section id="namecheap" style="max-width: 1100px; margin: 60px auto; padding: 0 20px;">
-    <h2 style="font-family: var(--font-heading); font-size: 32px; text-align: center; margin-bottom: 30px; color: var(--accent-violet);">🌐 Namecheap Domain Setup Guide</h2>
-    <div class="feature-card">
-      <h3 style="color: #fff; margin-bottom: 12px;">Step-by-Step for shadowspace.space:</h3>
-      <ol style="color: var(--text-muted); font-size: 14px; line-height: 1.8; margin-left: 20px;">
-        <li><strong style="color: var(--accent-cyan);">Namecheap DNS Configuration:</strong> Log into Namecheap &gt; Domain List &gt; <code>shadowspace.space</code> &gt; Advanced DNS. Add an <strong>A Record</strong> pointing <code>@</code> to your VPS IP address.</li>
-        <li><strong style="color: var(--accent-cyan);">Upload Website Files:</strong> Upload the contents of the <code>website/</code> directory (including <code>index.html</code> and <code>logo.png</code>) to your web hosting root (e.g. <code>public_html/</code> on Namecheap Shared Hosting or cPanel).</li>
-        <li><strong style="color: var(--accent-cyan);">Run Server Daemon:</strong> Run <code>npm start</code> on your VPS so <code>shadowspace.space</code> listens on TCP port <code>6667</code> and WebSocket port <code>8888</code>.</li>
-      </ol>
-    </div>
-  </section>
-
-  <footer style="text-align: center; padding: 40px; border-top: 1px solid var(--glass-border); color: var(--text-muted); font-size: 13px;">
-    <p>🌌 SHADOW-IRC v4.0 Ultimate Space Edition | Configured for <strong>shadowspace.space</strong> | Released under MIT License</p>
+  <footer>
+    <p>Shadow IRC v4.0 — <a href="https://github.com/CoinsCommunity/shadow-irc">GitHub</a> · MIT License · shadowspace.space</p>
   </footer>
 
-  <script>
-    const canvas = document.getElementById('nebula');
-    const ctx = canvas.getContext('2d');
-    let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
-
-    window.onresize = () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; };
-
-    const stars = Array.from({ length: 180 }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      r: Math.random() * 2 + 0.5,
-      color: ['#00f3ff', '#9d4edd', '#ff007f', '#00ff9d'][Math.floor(Math.random() * 4)],
-      speed: Math.random() * 0.2 + 0.05
-    }));
-
-    function draw() {
-      ctx.fillStyle = '#03010a';
-      ctx.fillRect(0, 0, width, height);
-
-      stars.forEach(s => {
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = s.color;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = s.color;
-        ctx.fill();
-        s.y += s.speed;
-        if (s.y > height) s.y = 0;
-      });
-      requestAnimationFrame(draw);
-    }
-    draw();
-  </script>
 </body>
 </html>

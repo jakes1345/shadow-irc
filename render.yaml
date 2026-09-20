@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: shadow-irc-space
+    name: shadow-irc-app
     env: node
     plan: free
     region: oregon
@@ -9,3 +9,5 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: TCP_PORT
+        value: 6667

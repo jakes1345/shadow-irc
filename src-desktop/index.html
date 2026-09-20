@@ -1232,7 +1232,10 @@
     addMsg('ChanServ', '👑 ChanServ Channel Engine. Click buttons below to REGISTER channel ownership or manage OP access.', 'system', 'ChanServ', true);
 
     function connectWebSocket() {
-      const wsUrl = localStorage.getItem('shadow_server_addr') || 'ws://localhost:8888';
+      const defaultWs = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+        ? `ws://${location.host}`
+        : `wss://${location.host}`;
+      const wsUrl = localStorage.getItem('shadow_server_addr') || defaultWs;
       document.getElementById('net-status').innerText = 'CONNECTING TO ' + wsUrl + '...';
 
       try {
