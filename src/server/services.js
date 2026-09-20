@@ -80,7 +80,9 @@ export class IRCServicesEngine {
         memos: Object.fromEntries(this.memos),
         vhosts: Object.fromEntries(this.vhosts)
       };
-      fs.writeFileSync(this.dbFile, JSON.stringify(payload, null, 2), 'utf8');
+      const tmp = this.dbFile + '.tmp';
+      fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), 'utf8');
+      fs.renameSync(tmp, this.dbFile);
     } catch (err) {
       // Anonymized silent error
     }
@@ -167,7 +169,7 @@ export class IRCServicesEngine {
 
         const salt = account.salt || 'SHADOW_SERVICES_SALT_2026';
         const inputHash = this.hashPassword(password, salt);
-        if (inputHash === account.passHash) {
+        if (crypto.timingSafeEqual(Buffer.from(inputHash, 'hex'), Buffer.from(account.passHash, 'hex'))) {
           client.account = nickLower;
           client.identified = true;
           account.lastLoginAt = new Date().toISOString();
@@ -202,8 +204,8 @@ export class IRCServicesEngine {
           return;
         }
 
-        const passHash = password ? this.hashPassword(password) : null;
-        if (client.account === targetLower || (passHash && passHash === account.passHash) || client.isOper) {
+        const passHash = password ? this.hashPassword(password, account.salt) : null;
+        if (client.account === targetLower || (passHash && crypto.timingSafeEqual(Buffer.from(passHash, 'hex'), Buffer.from(account.passHash, 'hex'))) || client.isOper) {
           // Disconnect ghost target
           const ghostClient = serverState.nicknames.get(targetLower);
           if (ghostClient) {
@@ -372,6 +374,10 @@ export class IRCServicesEngine {
   handleHostServ(client, command, args, sendFunc) {
     const sub = (command || '').toUpperCase();
     if (sub === 'REQUEST' && args[0]) {
+      if (!client.identified || !client.account) {
+        sendFunc(`:HostServ!Services@shadowspace.space NOTICE ${client.nickname} :You must be identified with NickServ to request a vhost.`);
+        return;
+      }
       const vhost = args[0];
       client.hostname = vhost;
       this.vhosts.set(client.nickname.toLowerCase(), vhost);

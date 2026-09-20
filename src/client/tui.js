@@ -593,6 +593,12 @@ class ShadowIRCClient {
     let trailing = '';
     let line = rawLine;
 
+    // Strip IRCv3 message tags (@key=val;... prefix)
+    if (line.startsWith('@')) {
+      const tagEnd = line.indexOf(' ');
+      if (tagEnd !== -1) line = line.substring(tagEnd + 1).trimStart();
+    }
+
     const trailingIdx = line.indexOf(' :');
     if (trailingIdx !== -1) {
       trailing = line.substring(trailingIdx + 2);

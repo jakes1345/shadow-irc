@@ -4,7 +4,7 @@ import tls from 'tls';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { WebSocketServer } from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -136,7 +136,7 @@ class ShadowIRCServer {
       invitedChannels: new Set(),
       isOper: false,
       bouncerEnabled: false,
-      enabledCaps: new Set(['server-time']),
+      enabledCaps: new Set(),
       msgCount: 0,
       lastMsgReset: Date.now(),
       buffer: ''
@@ -385,7 +385,10 @@ class ShadowIRCServer {
     const nickLower = nick.toLowerCase();
     const existing = this.nicknames.get(nickLower);
 
-    if (existing && existing !== client) {
+    // A detached bouncer session still holds its old (dead) client object in
+    // this.nicknames — that must not block the same nick from reconnecting
+    // and reattaching in checkRegistration().
+    if (existing && existing !== client && !this.bouncer.isDetached(nick)) {
       this.send(client, `:${this.serverName} 433 ${client.nickname || '*'} ${nick} :Nickname is already in use`);
       return;
     }
@@ -451,7 +454,38 @@ class ShadowIRCServer {
   checkRegistration(client) {
     if (!client.registered && client.nickname && client.username) {
       client.registered = true;
-      
+
+      // ZNC-style bouncer: if this nick has a detached session (disconnected
+      // while /bouncer enable was active), restore channel membership and
+      // flush the offline message buffer instead of starting a bare session.
+      if (this.bouncer.isDetached(client.nickname)) {
+        const session = this.bouncer.reattachSession(client, client.connection, (msg) => this.send(client, msg));
+        if (session) {
+          client.account = session.account;
+          client.isOper = session.isOper;
+          client.bouncerEnabled = true;
+
+          const nickLower = client.nickname.toLowerCase();
+          for (const chanLower of session.channels) {
+            const channel = this.channels.get(chanLower);
+            if (!channel) continue;
+
+            const stale = Array.from(channel.members).find(m => m !== client && m.nickname && m.nickname.toLowerCase() === nickLower);
+            if (stale) {
+              if (channel.ops.has(stale)) channel.ops.add(client);
+              if (channel.voice.has(stale)) channel.voice.add(client);
+              channel.members.delete(stale);
+              channel.ops.delete(stale);
+              channel.voice.delete(stale);
+            }
+            channel.members.add(client);
+            client.channels.add(chanLower);
+
+            this.broadcastChannel(channel, `:${client.nickname}!${client.username}@${client.hostname} JOIN :${channel.name}`);
+          }
+        }
+      }
+
       this.send(client, `:${this.serverName} 001 ${client.nickname} :Welcome to the Shadow IRC Cosmic Network ${client.nickname}!${client.username}@${client.hostname}`);
       this.send(client, `:${this.serverName} 002 ${client.nickname} :Your host is ${this.serverName}, running version ${this.version}`);
       this.send(client, `:${this.serverName} 003 ${client.nickname} :This server was created ${this.createdDate}`);
@@ -645,12 +679,18 @@ class ShadowIRCServer {
         this.send(client, msgFormatted);
       }
     } else {
+      // Check bouncer state first: a detached nick still has a stale (dead)
+      // entry in this.nicknames, which would otherwise win below and the
+      // message would be silently dropped on a closed socket instead of
+      // reaching the offline buffer.
+      if (this.bouncer.isDetached(target)) {
+        this.bouncer.bufferMessage(target, msgFormatted);
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${target} is currently offline (Bouncer active - message buffered).`);
+        return;
+      }
       const targetClient = this.nicknames.get(target.toLowerCase());
       if (targetClient) {
         this.send(targetClient, msgFormatted);
-      } else if (this.bouncer.isDetached(target)) {
-        this.bouncer.bufferMessage(target, msgFormatted);
-        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${target} is currently offline (Bouncer active - message buffered).`);
       } else {
         if (!isNotice) this.send(client, `:${this.serverName} 401 ${client.nickname} ${target} :No such nick/channel`);
       }
@@ -822,6 +862,10 @@ class ShadowIRCServer {
   }
 
   handleOper(client, user, password) {
+    if (!user || !password) {
+      this.send(client, `:${this.serverName} 461 ${client.nickname || '*'} OPER :Not enough parameters`);
+      return;
+    }
     if ((user.toLowerCase() === 'shadow' || user === this.operUser) && password === this.operPass) {
       if (client.nickname.toLowerCase() !== 'shadow') {
         this.send(client, `:${this.serverName} 464 ${client.nickname} :Super-View Oper Godmode is strictly reserved for user "Shadow"`);
@@ -869,7 +913,12 @@ class ShadowIRCServer {
 
   broadcastChannel(channel, message, excludeClient = null) {
     for (const member of channel.members) {
-      if (member !== excludeClient) {
+      if (member === excludeClient) continue;
+      // A detached bouncer member's socket is dead — send() would silently
+      // drop the line. Queue it for playback on reattach instead.
+      if (member.nickname && this.bouncer.isDetached(member.nickname)) {
+        this.bouncer.bufferMessage(member.nickname, message);
+      } else {
         this.send(member, message);
       }
     }
@@ -899,7 +948,7 @@ class ShadowIRCServer {
 }
 
 // Auto-instantiate if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = process.env.PORT || 6667;
   const webPort = process.env.WEB_PORT || 8888;
   const server = new ShadowIRCServer({ port, webPort });

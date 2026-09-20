@@ -58,6 +58,12 @@ class CosmicBot {
   }
 
   handleLine(line) {
+    // Strip IRCv3 message tags (@key=val;... prefix)
+    if (line.startsWith('@')) {
+      const tagEnd = line.indexOf(' ');
+      if (tagEnd !== -1) line = line.substring(tagEnd + 1).trimStart();
+    }
+
     if (line.startsWith('PING ')) {
       this.send(`PONG ${line.substring(5)}`);
       return;
