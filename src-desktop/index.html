@@ -7,734 +7,566 @@
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="shortcut icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
-  <!-- Google Fonts: Outfit, Space Grotesk, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   
   <style>
     :root {
-      --bg-void: #020207;
-      --bg-card: rgba(8, 10, 22, 0.52);
-      --bg-card-hover: rgba(16, 20, 40, 0.78);
-      --glass-border: rgba(150, 175, 225, 0.28);
-      --glass-border-bright: rgba(125, 211, 232, 0.5);
-      --accent-cyan: #7dd3e8;
-      --accent-cyan-glow: rgba(125, 211, 232, 0.35);
-      --accent-violet: #a78bfa;
-      --accent-magenta: #e8799f;
-      --accent-magenta-glow: rgba(232, 121, 159, 0.35);
-      --accent-green: #5ee6a8;
-      --accent-gold: #f2c266;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --font-ui: 'Outfit', sans-serif;
-      --font-heading: 'Space Grotesk', sans-serif;
-      --font-code: 'JetBrains Mono', monospace;
+      --bg: #050608;
+      --surface: #0c0e15;
+      --surface-2: #11141e;
+      --border: #1a1f30;
+      --border-glow: rgba(167,139,250,0.18);
+      --accent: #a78bfa;
+      --accent-dim: rgba(167,139,250,0.1);
+      --accent-bright: #c4b5fd;
+      --star-blue: #38bdf8;
+      --green: #34d399;
+      --red: #f87171;
+      --orange: #fb923c;
+      --text: #e8ecf8;
+      --muted: #6b7a99;
+      --faint: #1e2436;
+      --font-brand: 'Exo 2', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     .msg-body, .msg-nick, #realip-output { user-select: text; }
-    
+
     body {
-      background: var(--bg-void);
-      color: var(--text-main);
-      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
       height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
 
-    /* 1. Deep Space Nebula Canvas */
     canvas#nebula {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       z-index: 0;
       pointer-events: none;
+      opacity: 0.35;
     }
 
-    /* 2. Top Header */
+    /* ── Header ── */
     header {
       position: relative;
       z-index: 10;
-      background: rgba(4, 6, 14, 0.78);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--glass-border);
+      height: 44px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+      flex-shrink: 0;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .brand { display: flex; align-items: center; gap: 10px; }
 
-    .brand-logo {
-      width: 36px;
-      height: 36px;
+    .brand-orb {
+      width: 20px; height: 20px;
       border-radius: 50%;
-      box-shadow: 0 0 16px var(--accent-cyan-glow), 0 0 24px var(--accent-magenta-glow);
-      object-fit: cover;
-      border: 1px solid rgba(125, 211, 232, 0.4);
+      background: radial-gradient(circle at 35% 35%, var(--accent-bright), #6d28d9);
+      box-shadow: 0 0 10px rgba(167,139,250,0.4);
+      flex-shrink: 0;
     }
 
     .brand-title {
-      font-family: var(--font-heading);
-      font-weight: 700;
-      font-size: 17px;
-      letter-spacing: 1px;
-      background: linear-gradient(135deg, #ffffff 30%, #7dd3e8 70%, #e8799f 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 20px rgba(125, 211, 232, 0.2);
-    }
-
-    .brand-tag {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      color: var(--accent-violet);
-      background: rgba(167, 139, 250, 0.15);
-      border: 1px solid rgba(167, 139, 250, 0.4);
-      padding: 2px 8px;
-      border-radius: 20px;
+      font-family: var(--font-brand);
+      font-weight: 800;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
+      color: var(--text);
     }
 
-    .header-stats {
+    .header-right {
       display: flex;
       align-items: center;
-      gap: 14px;
-      font-size: 12px;
-      font-family: var(--font-code);
+      gap: 6px;
     }
+
+    .hdr-btn {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+    .hdr-btn:hover { border-color: var(--accent); color: var(--text); }
+    .hdr-btn.accent { border-color: rgba(167,139,250,0.35); color: var(--accent); }
 
     .stat-pill {
-      background: rgba(10, 13, 26,0.7);
-      border: 1px solid var(--glass-border);
-      padding: 4px 12px;
-      border-radius: 20px;
       display: flex;
       align-items: center;
-      gap: 8px;
-      color: var(--text-muted);
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+      white-space: nowrap;
     }
+    .stat-pill:hover { border-color: var(--accent); color: var(--text); }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--accent-green);
-      box-shadow: 0 0 10px var(--accent-green);
-      animation: pulse 2s infinite;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      flex-shrink: 0;
+      animation: pulse 2.5s infinite;
     }
-    
     .status-dot.offline {
-      background: var(--accent-magenta);
-      box-shadow: 0 0 10px var(--accent-magenta);
+      background: var(--red);
+      box-shadow: 0 0 6px var(--red);
+      animation: none;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.85); }
-    }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
 
-    /* 3. Main Workspace */
+    /* ── Workspace ── */
     #workspace {
       position: relative;
       z-index: 5;
       display: flex;
       flex: 1;
-      height: calc(100vh - 58px);
+      overflow: hidden;
     }
 
-    /* Left Channel & DM Sidebar */
+    /* ── Left Sidebar ── */
     #sidebar-left {
-      width: 250px;
-      background: var(--bg-card);
-      border-right: 1px solid var(--glass-border);
+      width: 188px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      box-shadow: 4px 0 25px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
     }
 
-    .sidebar-header {
-      padding: 14px 16px;
-      font-family: var(--font-heading);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      color: var(--accent-cyan);
+    .sidebar-section {
+      padding: 12px 12px 4px;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
+      color: var(--faint);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .quick-btn {
-      background: rgba(125, 211, 232, 0.1);
-      border: 1px solid var(--glass-border);
-      color: var(--accent-cyan);
-      border-radius: 6px;
-      padding: 3px 8px;
-      font-size: 11px;
+    .sidebar-add {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: transparent;
+      border: none;
       cursor: pointer;
-      transition: all 0.2s ease;
+      line-height: 1;
     }
-
-    .quick-btn:hover {
-      background: var(--accent-cyan);
-      color: #000;
-      box-shadow: 0 0 12px var(--accent-cyan-glow);
-    }
-
-    .tree-section-title {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.2px;
-      color: var(--text-dim);
-      padding: 14px 16px 6px;
-      text-transform: uppercase;
-    }
+    .sidebar-add:hover { color: var(--accent); }
 
     ul.tree-list {
       list-style: none;
-      padding: 4px 10px;
+      padding: 0 8px;
       overflow-y: auto;
-      flex: 1;
+      flex-shrink: 0;
     }
 
+    ul.tree-list.grow { flex: 1; }
+
     li.tree-item {
-      padding: 9px 12px;
-      margin-bottom: 4px;
-      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      padding: 5px 8px;
+      border-radius: 3px;
       cursor: pointer;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 500;
+      color: var(--muted);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      border: 1px solid transparent;
+      transition: color 0.1s, background 0.1s;
+      white-space: nowrap;
+      overflow: hidden;
     }
-
-    li.tree-item:hover {
-      background: var(--bg-card-hover);
-      color: var(--accent-cyan);
-      border-color: rgba(125, 211, 232, 0.2);
-      transform: translateX(3px);
-    }
-
-    li.tree-item.active {
-      background: linear-gradient(90deg, rgba(232, 121, 159, 0.25) 0%, rgba(167, 139, 250, 0.2) 100%);
-      color: #ffffff;
-      font-weight: 600;
-      border: 1px solid var(--accent-magenta);
-      box-shadow: 0 0 15px rgba(232, 121, 159, 0.2);
-    }
+    li.tree-item:hover { color: var(--text); background: var(--surface-2); }
+    li.tree-item.active { color: var(--accent); background: var(--accent-dim); }
 
     .badge-unread {
-      background: var(--accent-magenta);
+      background: var(--accent);
       color: #fff;
-      font-size: 10px;
+      font-size: 0.6rem;
       font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px var(--accent-magenta-glow);
+      padding: 1px 5px;
+      border-radius: 8px;
+      flex-shrink: 0;
     }
 
-    /* Central Chat View */
+    /* ── Chat View ── */
     #chat-view {
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: rgba(2, 3, 9, 0.35);
+      overflow: hidden;
     }
 
     #topic-bar {
-      padding: 12px 20px;
-      background: rgba(8, 11, 24,0.85);
-      border-bottom: 1px solid var(--glass-border);
+      padding: 7px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      flex-shrink: 0;
+      overflow: hidden;
     }
 
-    .topic-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      color: var(--text-main);
-    }
-
-    .topic-icon { color: var(--accent-gold); font-size: 16px; }
-    .topic-text { color: var(--accent-gold); font-weight: 500; font-size: 13px; }
-
-    .channel-badges {
-      display: flex;
-      gap: 8px;
-    }
-
-    .mode-badge {
-      font-size: 10px;
-      font-family: var(--font-code);
-      color: var(--accent-cyan);
-      background: rgba(125, 211, 232, 0.1);
-      border: 1px solid rgba(125, 211, 232, 0.3);
-      padding: 2px 7px;
-      border-radius: 4px;
-    }
-
-    /* Messages Stream */
-    #messages {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      scroll-behavior: smooth;
-    }
-
-    .msg-card {
-      display: flex;
-      gap: 12px;
-      background: rgba(10, 13, 26,0.45);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      padding: 10px 14px;
-      border-radius: 10px;
-      transition: background 0.2s ease;
-      animation: fadeIn 0.25s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .msg-card:hover {
-      background: rgba(22, 18, 48, 0.65);
-      border-color: rgba(150, 175, 225, 0.2);
-    }
-
-    .msg-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent-violet), var(--accent-cyan));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 13px;
-      color: #000;
-      box-shadow: 0 0 10px rgba(125, 211, 232, 0.2);
+    .topic-chan {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-right: 10px;
       flex-shrink: 0;
     }
 
-    .msg-content {
+    .topic-text {
+      font-size: 0.76rem;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
     }
 
-    .msg-header {
+    .channel-badges {
       display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+      margin-left: 10px;
+    }
+
+    .mode-badge {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--faint);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 2px;
+    }
+
+    /* ── Registration Banner ── */
+    #reg-banner {
+      background: rgba(167,139,250,0.06);
+      border-bottom: 1px solid rgba(167,139,250,0.18);
+      padding: 7px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      display: none;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    #reg-banner a {
+      color: var(--accent-bright);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(196,181,253,0.3);
+      cursor: pointer;
+    }
+
+    /* ── Messages ── */
+    #messages {
+      flex: 1;
+      padding: 6px 0 10px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .msg-row {
+      display: grid;
+      grid-template-columns: 40px 112px 1fr;
+      gap: 0 8px;
+      padding: 1px 14px;
+      line-height: 1.55;
+    }
+    .msg-row:hover { background: rgba(255,255,255,0.012); }
+
+    .msg-ts {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--faint);
+      text-align: right;
+      padding-top: 3px;
     }
 
     .msg-nick {
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 0.73rem;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      font-weight: 500;
+      padding-top: 1px;
     }
-
-    .msg-nick.op { color: var(--accent-magenta); text-shadow: 0 0 8px var(--accent-magenta-glow); }
-    .msg-nick.voice { color: var(--accent-green); }
-
-    .msg-time {
-      font-family: var(--font-code);
-      font-size: 11px;
-      color: var(--text-dim);
-    }
+    .msg-nick:hover { text-decoration: underline; }
+    .msg-nick.op { font-weight: 700; }
 
     .msg-body {
-      font-size: 13px;
-      line-height: 1.5;
-      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 0.83rem;
+      color: var(--text);
       word-break: break-word;
     }
 
-    .msg-card.action {
-      background: rgba(167, 139, 250, 0.12);
-      border-left: 3px solid var(--accent-violet);
+    .msg-row.action .msg-nick { display: none; }
+    .msg-row.action .msg-body { color: var(--muted); font-style: italic; grid-column: 2 / -1; }
+
+    .msg-row.system {
+      grid-template-columns: 40px 1fr;
+      align-items: baseline;
+    }
+    .msg-row.system .msg-body {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      grid-column: 2;
     }
 
-    .msg-card.action .msg-body {
-      color: #e2b6ff;
-      font-style: italic;
+    .msg-row.e2ee .msg-body {
+      color: var(--faint);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
     }
 
-    .msg-card.system {
-      background: rgba(125, 211, 232, 0.08);
-      border-left: 3px solid var(--accent-cyan);
+    /* Services dashboard */
+    .svc-panel {
+      margin: 10px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-glow);
+      border-radius: 5px;
+      padding: 14px;
     }
-
-    .msg-card.system .msg-body {
-      font-family: var(--font-code);
-      color: var(--accent-cyan);
-      font-size: 12px;
-    }
-
-    .msg-card.e2ee {
-      border: 1px solid rgba(94, 230, 168, 0.4);
-      background: rgba(94, 230, 168, 0.06);
-    }
-
-    .e2e-tag {
-      font-size: 9px;
-      font-family: var(--font-code);
-      color: var(--accent-green);
-      background: rgba(94, 230, 168, 0.15);
-      border: 1px solid var(--accent-green);
-      padding: 1px 5px;
-      border-radius: 4px;
-      margin-left: 6px;
-    }
-
-    /* Right User List Sidebar */
-    #sidebar-right {
-      width: 220px;
-      background: var(--bg-card);
-      border-left: 1px solid var(--glass-border);
-      display: flex;
-      flex-direction: column;
-      padding: 16px;
-    }
-
-    .user-section-title {
-      font-family: var(--font-heading);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.2px;
-      color: var(--accent-magenta);
-      margin-bottom: 12px;
+    .svc-panel-title {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--accent);
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
     }
-
-    ul.user-list {
-      list-style: none;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    li.user-item {
-      padding: 8px 10px;
-      margin-bottom: 4px;
-      border-radius: 8px;
-      font-size: 13px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .svc-panel p { font-size: 0.76rem; color: var(--muted); margin-bottom: 10px; }
+    .svc-btns { display: flex; gap: 7px; flex-wrap: wrap; }
+    .svc-btn {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 4px 11px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.12s;
     }
+    .svc-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .svc-btn.primary { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
-    li.user-item:hover {
-      background: var(--bg-card-hover);
-      color: var(--accent-cyan);
-    }
-
-    .user-role-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent-cyan);
-    }
-
-    li.user-item.op .user-role-dot { background: var(--accent-magenta); box-shadow: 0 0 8px var(--accent-magenta-glow); }
-    li.user-item.voice .user-role-dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
-
-    li.user-item.op { color: #ffffff; font-weight: 600; }
-    li.user-item.voice { color: var(--accent-green); }
-    li.user-item.ignored { opacity: 0.4; text-decoration: line-through; }
-
-    .msg-nick { cursor: pointer; }
-    .msg-nick:hover { text-decoration: underline; }
-
-    /* User popover menu */
-    #user-menu {
-      position: fixed;
-      z-index: 500;
-      min-width: 190px;
-      background: rgba(8, 10, 22, 0.96);
-      border: 1px solid var(--glass-border-bright);
-      border-radius: 10px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 20px var(--accent-cyan-glow);
-      padding: 6px;
-      display: none;
-      font-family: var(--font-ui);
-    }
-    #user-menu .um-head {
-      padding: 8px 10px 6px;
-      font-family: var(--font-heading);
-      font-weight: 700;
-      font-size: 13px;
-      color: #fff;
-      border-bottom: 1px solid var(--glass-border);
-      margin-bottom: 4px;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    #user-menu .um-head small { font-weight: 500; color: var(--text-dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
-    #user-menu .um-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 10px;
-      border-radius: 6px;
-      font-size: 13px;
-      color: var(--text-main);
-      cursor: pointer;
-    }
-    #user-menu .um-item:hover { background: var(--bg-card-hover); color: var(--accent-cyan); }
-    #user-menu .um-item.danger:hover { color: var(--accent-magenta); }
-    #user-menu .um-item span:first-child { width: 18px; text-align: center; }
-    #user-menu .um-sep { height: 1px; background: var(--glass-border); margin: 4px 6px; }
-
-    /* Bottom Command Prompt Bar */
+    /* ── Prompt Bar ── */
     #prompt-bar-container {
-      padding: 14px 20px;
-      background: rgba(4, 6, 14,0.9);
-      backdrop-filter: blur(16px);
-      border-top: 1px solid var(--glass-border);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .quick-ctcp-bar {
-      display: flex;
-      gap: 8px;
-      font-size: 11px;
-    }
-
-    .chip-btn {
-      background: rgba(150, 175, 225, 0.15);
-      border: 1px solid var(--glass-border);
-      color: var(--accent-violet);
-      padding: 3px 10px;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .chip-btn:hover {
-      background: var(--accent-violet);
-      color: #fff;
-      box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 9px 14px;
+      flex-shrink: 0;
     }
 
     .prompt-bar {
       display: flex;
-      gap: 12px;
       align-items: center;
+      gap: 6px;
     }
 
-    input#cmd-input {
+    #prompt-prefix {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--accent);
+      flex-shrink: 0;
+      white-space: nowrap;
+      opacity: 0.85;
+    }
+
+    #cmd-input {
       flex: 1;
-      background: rgba(4, 2, 14, 0.9);
-      border: 1px solid var(--glass-border);
-      color: #ffffff;
-      padding: 12px 16px;
-      border-radius: 10px;
-      outline: none;
-      font-family: var(--font-ui);
-      font-size: 13.5px;
-      transition: all 0.25s ease;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
-    }
-
-    input#cmd-input:focus {
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 20px var(--accent-cyan-glow), inset 0 2px 6px rgba(0, 0, 0, 0.5);
-    }
-
-    button.send-btn {
-      background: linear-gradient(135deg, var(--accent-magenta), var(--accent-violet));
-      color: #ffffff;
+      background: transparent;
       border: none;
-      padding: 12px 26px;
-      border-radius: 10px;
-      font-family: var(--font-heading);
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: 1px;
+      outline: none;
+      font-family: var(--font-mono);
+      font-size: 0.83rem;
+      color: var(--text);
+      padding: 0;
+    }
+    #cmd-input::placeholder { color: var(--faint); }
+
+    /* ── Right Sidebar ── */
+    #sidebar-right {
+      width: 136px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .user-section-title {
+      padding: 12px 12px 4px;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--faint);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .user-list { list-style: none; padding: 4px 8px; overflow-y: auto; flex: 1; }
+
+    .user-item {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 3px 5px;
       cursor: pointer;
-      transition: all 0.25s ease;
-      box-shadow: 0 4px 20px var(--accent-magenta-glow);
+      color: var(--muted);
+      border-radius: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+    .user-item:hover { color: var(--text); background: var(--surface-2); }
+    .user-item.op { color: var(--accent); }
+    .user-item.voice { color: var(--star-blue); }
 
-    button.send-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 25px var(--accent-magenta-glow);
-      filter: brightness(1.15);
-    }
-
-    /* Modal Overlay & Guide Card */
+    /* ── Modals ── */
     .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(3, 1, 10, 0.85);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      z-index: 1000;
+      position: fixed; inset: 0;
+      z-index: 100;
+      background: rgba(5,6,8,0.88);
+      backdrop-filter: blur(10px);
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: fadeIn 0.25s ease;
     }
 
     .modal-card {
-      width: 560px;
-      max-width: 90vw;
-      background: var(--bg-card);
-      border: 1px solid var(--glass-border-bright);
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-cyan-glow);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border-glow);
+      border-radius: 8px;
+      padding: 22px;
+      max-width: 860px;
+      width: 92vw;
+      max-height: 88vh;
+      overflow-y: auto;
     }
 
     .modal-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      justify-content: space-between;
+      margin-bottom: 14px;
       padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
     }
 
     .modal-header h3 {
-      font-family: var(--font-heading);
-      font-size: 16px;
-      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
-    .close-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 18px;
+    .modal-close {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
       cursor: pointer;
     }
-    .close-btn:hover { color: var(--accent-magenta); }
+    .modal-close:hover { color: var(--text); border-color: var(--accent); }
 
-    .guide-tabs {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
+    /* ── User context menu ── */
+    #user-menu {
+      position: fixed;
+      z-index: 200;
+      background: var(--surface-2);
+      border: 1px solid var(--border-glow);
+      border-radius: 5px;
+      padding: 5px 0;
+      min-width: 156px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+      display: none;
     }
 
-    .guide-tab {
-      background: rgba(150, 175, 225, 0.15);
-      border: 1px solid var(--glass-border);
-      color: var(--text-muted);
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 12px;
+    /* Legacy compat */
+    .send-btn {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 5px 12px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 3px;
+      color: var(--accent);
       cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s ease;
     }
+    .send-btn:hover { background: var(--accent); color: #fff; }
 
-    .guide-tab.active {
-      background: var(--accent-cyan);
-      color: #000;
-      font-weight: 700;
-      box-shadow: 0 0 12px var(--accent-cyan-glow);
+    .quick-btn {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
+      cursor: pointer;
     }
+    .quick-btn:hover { border-color: var(--accent); color: var(--text); }
 
-    .guide-content {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 13.5px;
-      line-height: 1.6;
-      color: var(--text-main);
-      min-height: 140px;
-    }
-
-    .guide-content code {
-      font-family: var(--font-code);
-      background: rgba(4, 2, 14, 0.9);
-      border: 1px solid var(--accent-violet);
-      color: var(--accent-cyan);
-      padding: 4px 8px;
-      border-radius: 6px;
-      display: block;
-      margin: 4px 0;
-    }
-
-    .guide-callout {
-      background: rgba(125, 211, 232, 0.08);
-      border-left: 3px solid var(--accent-cyan);
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      color: var(--accent-cyan);
-    }
-
-    .modal-footer {
-      display: flex;
-      justify-content: space-between;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      padding-top: 12px;
-    }
-
-    /* Scrollbars */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(150, 175, 225, 0.3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-    /* Mobile layout */
+    /* Mobile */
     @media (max-width: 768px) {
-      #sidebar-left { width: 200px; min-width: 0; }
       #sidebar-right { display: none; }
-      .header-stats .stat-pill:not(:first-child) { display: none; }
-      #workspace { height: calc(100vh - 52px); }
+      #sidebar-left { width: 160px; }
     }
-    @media (max-width: 520px) {
-      #sidebar-left { position: fixed; left: -200px; top: 58px; height: calc(100vh - 58px); z-index: 100; transition: left 0.2s ease; }
-      #sidebar-left.open { left: 0; }
-      #msg-area { flex: 1; min-width: 0; }
-      .brand-name { display: none; }
-      header { padding: 8px 12px; }
-      #input-area { padding: 8px 10px; }
-      #cmd-input { font-size: 14px; }
+    @media (max-width: 480px) {
+      #sidebar-left { display: none; }
+      header { padding: 0 12px; }
     }
   </style>
 </head>
@@ -746,24 +578,21 @@
   <!-- Header -->
   <header>
     <div class="brand">
-      <img src="logo.png" class="brand-logo" alt="SHADOW // IRC Logo" />
-      <div class="brand-title">SHADOW // IRC</div>
-      <span class="brand-tag">Deep Space Network</span>
+      <div class="brand-orb"></div>
+      <span class="brand-title">Shadow IRC</span>
     </div>
 
-    <div class="header-stats">
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(167, 139, 250, 0.25); border-color: var(--accent-violet); color: #fff;" onclick="toggleSuperViewModal(true)">👑 Super-View</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px; background: rgba(232, 121, 159, 0.2); border-color: var(--accent-magenta); color: #fff;" onclick="toggleGuideModal(true)">❓ Guide & Tour</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptChangeServerNode()">🌐 Server Node</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
-      <button class="quick-btn" style="padding: 4px 10px; font-size: 11px;" onclick="promptIdentifyNick()">🔑 Identify</button>
-      <div class="stat-pill" style="cursor: pointer;" onclick="promptChangeNick()" title="Click to change your nickname">
+    <div class="header-right">
+      <button class="hdr-btn accent" onclick="toggleSuperViewModal(true)">oper</button>
+      <button class="hdr-btn" onclick="promptRegisterNick()">register</button>
+      <button class="hdr-btn" onclick="promptIdentifyNick()">identify</button>
+      <button class="hdr-btn" onclick="promptChangeServerNode()">server</button>
+      <div class="stat-pill" onclick="promptChangeNick()" title="click to change nick">
         <div class="status-dot" id="status-indicator"></div>
-        <span id="net-status">CONNECTING...</span>
+        <span id="net-status">connecting</span>
       </div>
-      <div class="stat-pill">
-        <span>🔒 E2EE:</span>
-        <span id="e2ee-status" style="color: var(--text-muted);">OFF (/encrypt &lt;key&gt;)</span>
+      <div class="stat-pill" style="cursor:default">
+        <span id="e2ee-status" style="color:var(--faint)">e2ee off</span>
       </div>
     </div>
   </header>
@@ -772,52 +601,50 @@
   <div id="workspace">
     <!-- Sidebar Left: Channels & DMs -->
     <div id="sidebar-left">
-      <div class="sidebar-header">
-        <span>CHANNELS & DMS</span>
-        <button class="quick-btn" onclick="promptJoinChannel()">+ JOIN</button>
+      <div class="sidebar-section">
+        <span>channels</span>
+        <button class="sidebar-add" onclick="promptJoinChannel()" title="join channel">+</button>
       </div>
-
-      <div class="tree-section-title">Public Channels</div>
-      <ul class="tree-list" id="chan-list">
+      <ul class="tree-list grow" id="chan-list">
         <li class="tree-item active" id="tab-status" onclick="switchWindow('status')">
-          <span>🌐 # status</span>
+          <span># status</span>
         </li>
         <li class="tree-item" id="tab-#cosmos" onclick="switchWindow('#cosmos')">
-          <span>🚀 # cosmos</span>
+          <span># cosmos</span>
           <span class="badge-unread" id="unread-#cosmos" style="display:none;">0</span>
         </li>
         <li class="tree-item" id="tab-#quantum" onclick="switchWindow('#quantum')">
-          <span>⚡ # quantum</span>
+          <span># quantum</span>
           <span class="badge-unread" id="unread-#quantum" style="display:none;">0</span>
         </li>
         <li class="tree-item" id="tab-#void" onclick="switchWindow('#void')">
-          <span>🕳️ # void</span>
+          <span># void</span>
           <span class="badge-unread" id="unread-#void" style="display:none;">0</span>
         </li>
       </ul>
 
-      <div class="tree-section-title">Direct Messages</div>
+      <div class="sidebar-section">dms</div>
       <ul class="tree-list" id="dm-list">
-        <li class="tree-item" onclick="switchWindow('NickServ')">
-          <span>🛡️ NickServ</span>
-        </li>
-        <li class="tree-item" onclick="switchWindow('ChanServ')">
-          <span>👑 ChanServ</span>
-        </li>
+        <li class="tree-item" onclick="switchWindow('NickServ')"><span>NickServ</span></li>
+        <li class="tree-item" onclick="switchWindow('ChanServ')"><span>ChanServ</span></li>
       </ul>
     </div>
 
     <!-- Main Chat Area -->
     <div id="chat-view">
       <div id="topic-bar">
-        <div class="topic-info">
-          <span class="topic-icon">✨</span>
-          <span class="topic-text" id="active-topic">Welcome to SHADOW-IRC Deep Space Cosmic Network | IRCv3 & Services Active</span>
-        </div>
+        <span class="topic-chan" id="topic-chan-name">#status</span>
+        <span class="topic-text" id="active-topic">Welcome to Shadow IRC</span>
         <div class="channel-badges">
-          <span class="mode-badge">+n +t +C</span>
-          <span class="mode-badge" id="member-count-badge">1 Crew</span>
+          <span class="mode-badge" id="member-count-badge">1</span>
         </div>
+      </div>
+
+      <!-- Registration Banner (shown when nick is unregistered) -->
+      <div id="reg-banner">
+        <span>Nick not registered.</span>
+        <a onclick="promptRegisterNick()">Register with device key</a>
+        <span style="color:var(--faint)">or /ns register &lt;password&gt;</span>
       </div>
 
       <!-- Messages Stream -->
@@ -825,18 +652,9 @@
 
       <!-- Command Prompt Bar -->
       <div id="prompt-bar-container">
-        <div class="quick-ctcp-bar">
-          <span class="chip-btn" onclick="sendQuickCmd('/me floats through the quantum void')">✨ /me action</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/ns help')">🛡️ /ns help</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/cs help')">👑 /cs help</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/encrypt cosmic_key')">🔒 /encrypt</span>
-          <span class="chip-btn" style="background: rgba(255,0,0,0.2); color: #ff4d4d; border-color: #ff4d4d;" onclick="sendQuickCmd('/nuke')">🚨 /nuke</span>
-          <span class="chip-btn" onclick="sendQuickCmd('/clear')">🧹 /clear</span>
-        </div>
-
         <div class="prompt-bar">
-          <input type="text" id="cmd-input" placeholder="Type /join #cosmos, /me floats in space, or chat message..." autofocus />
-          <button class="send-btn" onclick="sendInput()">SEND 🚀</button>
+          <span id="prompt-prefix">#status /</span>
+          <input type="text" id="cmd-input" placeholder="message or command..." autofocus />
         </div>
       </div>
     </div>
@@ -1080,7 +898,9 @@
         return true;
       }
       if (/is not registered/.test(text) && !pendingDeviceLink) {
-        addMsg('status', '🔑 ' + myNick + ' is not registered — click Register to claim it with this device\'s key.', 'system');
+        addMsg('status', myNick + ' is not registered — click Register to claim it with this device\'s key.', 'system');
+        const banner = document.getElementById('reg-banner');
+        if (banner) banner.style.display = 'flex';
         return false;
       }
       if (/already registered/.test(text) && pendingDeviceLink) {
@@ -1091,6 +911,8 @@
       if (/now identified for/.test(text)) {
         identified = true;
         updateIdentityBadge();
+        const banner = document.getElementById('reg-banner');
+        if (banner) banner.style.display = 'none';
         if (pendingDeviceLink) { pendingDeviceLink = false; sendRaw('NS ADDKEY ' + DeviceKey.spki); }
         return false;
       }
@@ -1641,8 +1463,8 @@
       li.className = 'tree-item';
       li.id = 'tab-' + winName;
       li.onclick = () => switchWindow(winName);
-      const icon = winName === 'status' ? '🌐' : (isChannel ? '🚀' : '💬');
-      li.innerHTML = `<span>${icon} ${winName}</span><span class="badge-unread" id="unread-${winName}" style="display:none;">0</span>`;
+      const prefix = isChannel ? '# ' : '';
+      li.innerHTML = `<span>${escapeHtml(prefix + winName)}</span><span class="badge-unread" id="unread-${escapeHtml(winName)}" style="display:none;">0</span>`;
       targetList.appendChild(li);
     }
 
@@ -1810,7 +1632,11 @@
         el.classList.toggle('active', el.id === 'tab-' + winName || el.innerText.includes(winName));
       });
 
-      document.getElementById('active-topic').innerText = win ? (win.topic || 'Deep Space Cosmic Channel') : 'SHADOW-IRC';
+      document.getElementById('active-topic').innerText = win ? (win.topic || '') : '';
+      const chanEl = document.getElementById('topic-chan-name');
+      if (chanEl) chanEl.textContent = winName;
+      const pfx = document.getElementById('prompt-prefix');
+      if (pfx) pfx.textContent = (winName.startsWith('#') ? winName : winName) + ' /';
       renderMessages();
       if (win) renderUsers(win.users);
       updateE2eeStatus();
@@ -1823,76 +1649,30 @@
 
       let htmlContent = '';
 
-      // Render Service Dashboard Cards if in NickServ or ChanServ DM
+      // Service panels for NickServ/ChanServ DMs
       if (currentWindow === 'NickServ') {
-        htmlContent += `
-          <div style="background: rgba(138,43,226,0.15); border: 1px solid var(--accent-violet); padding: 14px; border-radius: 10px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="font-weight: 700; color: var(--accent-cyan); font-size: 14px;">🛡️ NickServ Service Dashboard</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Manage your registered nickname, identify credentials, or ghost unauthorized sessions.</div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
-              <button class="send-btn" style="padding: 5px 12px; font-size: 11px;" onclick="promptRegisterNick()">⚡ Register Nick</button>
-              <button class="send-btn" style="padding: 5px 12px; font-size: 11px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));" onclick="promptIdentifyNick()">🔑 Identify</button>
-              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/ns INFO')">ℹ️ Nick Info</button>
-              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/ns GHOST ' + myNick)">👻 Ghost Session</button>
-            </div>
-          </div>`;
+        htmlContent += `<div class="svc-panel"><div class="svc-panel-title">NickServ</div><p>Register your nickname to this device. Your browser generates a private key — it never leaves here.</p><div class="svc-btns"><button class="svc-btn primary" onclick="promptRegisterNick()">register</button><button class="svc-btn primary" onclick="promptIdentifyNick()">identify</button><button class="svc-btn" onclick="sendQuickCmd('/ns INFO')">info</button><button class="svc-btn" onclick="sendQuickCmd('/ns GHOST ' + myNick)">ghost</button></div></div>`;
       } else if (currentWindow === 'ChanServ') {
-        htmlContent += `
-          <div style="background: rgba(255,0,127,0.15); border: 1px solid var(--accent-magenta); padding: 14px; border-radius: 10px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="font-weight: 700; color: var(--accent-magenta); font-size: 14px;">👑 ChanServ Channel Dashboard</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Register channel ownership, manage Founder access, or grant Operator (@op) privileges.</div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
-              <button class="send-btn" style="padding: 5px 12px; font-size: 11px;" onclick="sendQuickCmd('/cs REGISTER #cosmos Deep Space Network')">👑 Register #cosmos</button>
-              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/cs OP #cosmos ' + myNick)">⚡ Op Self</button>
-              <button class="quick-btn" style="padding: 5px 12px;" onclick="sendQuickCmd('/cs INFO #cosmos')">ℹ️ Channel Info</button>
-            </div>
-          </div>`;
+        htmlContent += `<div class="svc-panel"><div class="svc-panel-title">ChanServ</div><p>Register channel ownership and manage access levels.</p><div class="svc-btns"><button class="svc-btn primary" onclick="sendQuickCmd('/cs REGISTER ' + currentWindow + ' Shadow network')">register channel</button><button class="svc-btn" onclick="sendQuickCmd('/cs OP ' + currentWindow + ' ' + myNick)">op self</button><button class="svc-btn" onclick="sendQuickCmd('/cs INFO ' + currentWindow)">info</button></div></div>`;
       }
 
       htmlContent += win.messages.map(m => {
         const isOp = m.sender.startsWith('@');
         const isVoice = m.sender.startsWith('+');
-        const avatarLetter = m.sender.replace(/[@+]/g, '').charAt(0).toUpperCase() || 'S';
-
-        const nickAttr = escapeHtml(m.sender.replace(/^[@+]/, '')).replace(/'/g, '&#39;');
+        const rawNick = m.sender.replace(/^[@+]/, '');
+        const nickAttr = escapeHtml(rawNick).replace(/'/g, '&#39;');
         const nickHandlers = `onclick="openUserMenu('${nickAttr}', event)" oncontextmenu="openUserMenu('${nickAttr}', event)"`;
+        const hhmm = m.time.replace(/:\d\d\s*(AM|PM)?$/i, '').replace(/^(\d):/, '0$1:');
 
         if (m.type === 'action') {
-          return `
-            <div class="msg-card action">
-              <div class="msg-avatar">${avatarLetter}</div>
-              <div class="msg-content">
-                <div class="msg-header">
-                  <span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}" ${nickHandlers}>${escapeHtml(m.sender)}</span>
-                  <span class="msg-time">[${m.time}]</span>
-                </div>
-                <div class="msg-body">${escapeHtml(m.body)}</div>
-              </div>
-            </div>`;
+          return `<div class="msg-row action"><span class="msg-ts">${hhmm}</span><span></span><span class="msg-body">* ${escapeHtml(rawNick)} ${escapeHtml(m.body)}</span></div>`;
         } else if (m.type === 'system') {
-          return `
-            <div class="msg-card system">
-              <div class="msg-avatar">🌐</div>
-              <div class="msg-content">
-                <div class="msg-header">
-                  <span class="msg-nick" style="color: var(--accent-cyan)">SYSTEM</span>
-                  <span class="msg-time">[${m.time}]</span>
-                </div>
-                <div class="msg-body">${escapeHtml(m.body)}</div>
-              </div>
-            </div>`;
+          return `<div class="msg-row system"><span class="msg-ts">${hhmm}</span><span class="msg-body">${escapeHtml(m.body)}</span></div>`;
         } else {
-          return `
-            <div class="msg-card">
-              <div class="msg-avatar">${avatarLetter}</div>
-              <div class="msg-content">
-                <div class="msg-header">
-                  <span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}" ${nickHandlers}>${escapeHtml(m.sender)}</span>
-                  <span class="msg-time">[${m.time}]</span>
-                </div>
-                <div class="msg-body">${escapeHtml(m.body)}</div>
-              </div>
-            </div>`;
+          const nickStyle = `color:${nickColor(rawNick)}`;
+          const isE2ee = m.body.startsWith('ENC·') || m.body.startsWith('ENC·');
+          const rowCls = isE2ee ? 'msg-row e2ee' : 'msg-row';
+          return `<div class="${rowCls}"><span class="msg-ts">${hhmm}</span><span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}" style="${nickStyle}" ${nickHandlers}>${escapeHtml(rawNick)}</span><span class="msg-body">${escapeHtml(m.body)}</span></div>`;
         }
       }).join('');
 

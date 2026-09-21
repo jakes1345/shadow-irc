@@ -82,16 +82,19 @@ class ShadowIRCServer {
     this.inviteTokens = new Map();
     
     this.motd = [
-      "==========================================================================",
-      "   ______  ______  ___  ______  ______ _ _  _ ___________ _____ ",
-      "  /  ___/ / / / / / _ \\ /  _  \\ /  __  / / / / / /  __/  __/  __/",
-      "  \\___ \\ / /_/ / / /_\\ \\/  //  / / /_/ / /_/ / / /  _/  _/  / /_ ",
-      " /____/ /_____/ /_/   \\_\\_____/ /_____/\\____/_/_/  /___/  \\____/ ",
-      "==========================================================================",
-      "       WELCOME TO SHADOW-IRC v4.0 - DEEP SPACE COSMOS NETWORK             ",
-      " Quantum Void | Nebula Particles | Event Horizon E2EE | IP Cloaked         ",
-      " Services: NickServ | ChanServ | MemoServ | HostServ | Bouncer | CTCP    ",
-      "=========================================================================="
+      "──────────────────────────────────────────────────────",
+      "  SHADOW IRC  ·  Deep Space Network",
+      "  wss://app.shadowspace.space",
+      "──────────────────────────────────────────────────────",
+      "  Private by default. Encrypted on demand.",
+      "  Invite only. No logs. No surveillance.",
+      "",
+      "  /ns register <pw>   claim your nick",
+      "  /encrypt <key>      enable E2EE in any channel",
+      "  /join #cosmos       main channel",
+      "",
+      "  Services: NickServ · ChanServ · MemoServ · HostServ",
+      "──────────────────────────────────────────────────────"
     ];
   }
 
