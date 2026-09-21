@@ -2170,6 +2170,10 @@
 
     // ── Invite flow ──────────────────────────────────────────────────────────
     (async () => {
+      function esc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
+
       const params = new URLSearchParams(window.location.search);
       const inviteToken = params.get('invite');
       if (!inviteToken || !/^[a-f0-9]{48}$/.test(inviteToken)) return;
@@ -2201,7 +2205,7 @@
           </h2>
           <p style="color:#6b7a99;font-size:0.85rem;margin:0 0 ${valid ? 24 : 0}px;line-height:1.6">
             ${valid
-              ? `Someone on <strong style="color:#a78bfa">shadowspace.space</strong> wants you here.${inviteInfo?.by ? `<br>Invited by <strong style="color:#a78bfa">${inviteInfo.by}</strong>.` : ''}<br>Connect below to join the network.`
+              ? `Someone on <strong style="color:#a78bfa">shadowspace.space</strong> wants you here.${inviteInfo?.by ? `<br>Invited by <strong style="color:#a78bfa">${esc(inviteInfo.by)}</strong>.` : ''}<br>Connect below to join the network.`
               : 'This invite link has expired or already been used. Ask for a new one.'
             }
           </p>

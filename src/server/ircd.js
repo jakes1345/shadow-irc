@@ -1376,7 +1376,7 @@ class ShadowIRCServer {
         res.end(JSON.stringify({ valid: false }));
         return;
       }
-      entry.uses++;
+      // Read-only check — don't mutate state here; use a separate redeem step for accounting
       res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
       res.end(JSON.stringify({ valid: true, network: this.serverName, by: entry.nick }));
       return;
