@@ -411,8 +411,28 @@ export class IRCServicesEngine {
         memoList.forEach((m, i) => ms(`[${i + 1}] From ${m.sender}: ${m.text}`));
         break;
       }
+      case 'DEL':
+      case 'DELETE': {
+        if (!client.identified || !client.account) { ms('You must be identified to delete memos.'); return; }
+        const list = this.memos.get(client.account) || [];
+        const idx = parseInt(args[0], 10);
+        if (args[0] === 'ALL') {
+          this.memos.delete(client.account);
+          this.saveDB();
+          ms('All memos deleted.');
+        } else if (!isNaN(idx) && idx >= 1 && idx <= list.length) {
+          list.splice(idx - 1, 1);
+          if (list.length === 0) this.memos.delete(client.account);
+          else this.memos.set(client.account, list);
+          this.saveDB();
+          ms(`Memo ${idx} deleted.`);
+        } else {
+          ms('Syntax: DELETE <number> or DELETE ALL');
+        }
+        break;
+      }
       default:
-        ms('MemoServ Commands: SEND <nick> <msg>, READ');
+        ms('MemoServ Commands: SEND <nick> <msg>, READ, DELETE <number|ALL>');
     }
   }
 
@@ -425,6 +445,16 @@ export class IRCServicesEngine {
     if (sub === 'REQUEST' && args[0]) {
       if (!client.identified || !client.account) { hs('You must be identified with NickServ to request a vhost.'); return; }
       const vhost = args[0];
+      // Only allow safe hostname characters; block privileged-looking vhosts
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9.\-]{2,63}$/.test(vhost)) {
+        hs('Invalid vHost format. Use only letters, numbers, dots and hyphens (3–64 chars).');
+        return;
+      }
+      const blocked = ['shadow', 'oper', 'admin', 'root', 'operator', 'server', 'services', 'nsa', 'gov', 'staff'];
+      if (blocked.some(b => vhost.toLowerCase().includes(b))) {
+        hs('That vHost is reserved. Choose a different one.');
+        return;
+      }
       client.hostname = vhost;
       this.vhosts.set(client.nickname.toLowerCase(), vhost);
       this.saveDB();

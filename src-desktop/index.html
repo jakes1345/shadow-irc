@@ -34,7 +34,8 @@
       --font-code: 'JetBrains Mono', monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .msg-body, .msg-nick, #realip-output { user-select: text; }
     
     body {
       background: var(--bg-void);
@@ -718,6 +719,23 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(150, 175, 225, 0.3); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+    /* Mobile layout */
+    @media (max-width: 768px) {
+      #sidebar-left { width: 200px; min-width: 0; }
+      #sidebar-right { display: none; }
+      .header-stats .stat-pill:not(:first-child) { display: none; }
+      #workspace { height: calc(100vh - 52px); }
+    }
+    @media (max-width: 520px) {
+      #sidebar-left { position: fixed; left: -200px; top: 58px; height: calc(100vh - 58px); z-index: 100; transition: left 0.2s ease; }
+      #sidebar-left.open { left: 0; }
+      #msg-area { flex: 1; min-width: 0; }
+      .brand-name { display: none; }
+      header { padding: 8px 12px; }
+      #input-area { padding: 8px 10px; }
+      #cmd-input { font-size: 14px; }
+    }
   </style>
 </head>
 <body>
@@ -1940,7 +1958,7 @@
         if (key) {
           channelKeys.set(currentWindow.toLowerCase(), key);
           updateE2eeStatus();
-          addMsg(currentWindow, '🔒 E2EE enabled for ' + currentWindow + ' (AES-256-GCM, passphrase "' + key + '")', 'system');
+          addMsg(currentWindow, '🔒 E2EE enabled for ' + currentWindow + ' (AES-256-GCM)', 'system');
         }
       } else if (val === '/decrypt') {
         channelKeys.delete(currentWindow.toLowerCase());

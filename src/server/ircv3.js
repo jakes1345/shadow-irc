@@ -55,7 +55,6 @@ export class IRCv3CapNegotiator {
     'echo-message',
     'message-tags',
     'chathistory',
-    'sasl',
     'account-notify',
     'extended-join'
   ];

@@ -113,7 +113,7 @@ class CosmicBot {
         const key = body.split(/\s+/)[1];
         if (key) {
           this.e2eKey = key;
-          this.say(`🔒 E2EE Key set for CosmicAI: ${key}. Messages encrypted!`);
+          this.say(`🔒 E2EE enabled for CosmicAI.`);
         } else {
           this.e2eKey = null;
           this.say(`🔓 E2EE Disabled for CosmicAI.`);

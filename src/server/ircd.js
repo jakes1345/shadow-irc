@@ -63,6 +63,7 @@ class ShadowIRCServer {
     this.clients = new Map(); // socket/ws -> ClientState
     this.nicknames = new Map(); // nickname (lowercase) -> ClientState
     this.channels = new Map(); // channelName (lowercase) -> ChannelState
+    this.ipConnections = new Map(); // ip -> count
     
     // Subsystem Modules
     this.services = new IRCServicesEngine();
@@ -71,6 +72,7 @@ class ShadowIRCServer {
     
     // Rate Limiting
     this.maxMessageRate = 12;
+    this.maxConnectionsPerIp = 5;
     
     this.motd = [
       "==========================================================================",
@@ -121,7 +123,15 @@ class ShadowIRCServer {
   }
 
   handleTcpConnection(socket) {
-    const client = this.createClientState(socket, socket.remoteAddress, 'TCP');
+    const ip = socket.remoteAddress || '0.0.0.0';
+    const count = (this.ipConnections.get(ip) || 0);
+    if (count >= this.maxConnectionsPerIp) {
+      socket.write('ERROR :Too many connections from your IP\r\n');
+      socket.destroy();
+      return;
+    }
+    this.ipConnections.set(ip, count + 1);
+    const client = this.createClientState(socket, ip, 'TCP');
 
     socket.on('data', (chunk) => {
       this.processRawInput(client, chunk.toString('utf8'));
@@ -134,6 +144,12 @@ class ShadowIRCServer {
   handleWsConnection(ws, req) {
     // Only trust CF-Connecting-IP when the TCP peer is a verified Cloudflare egress IP
     const ip = resolveClientIp(req);
+    const count = (this.ipConnections.get(ip) || 0);
+    if (count >= this.maxConnectionsPerIp) {
+      ws.close(1008, 'Too many connections from your IP');
+      return;
+    }
+    this.ipConnections.set(ip, count + 1);
     const client = this.createClientState(ws, ip, 'WebSocket');
 
     ws.on('message', (message) => {
@@ -212,6 +228,12 @@ class ShadowIRCServer {
   handleDisconnect(client, reason) {
     if (!this.clients.has(client.connection)) return;
     if (client.shadowTimer) clearTimeout(client.shadowTimer);
+
+    if (client.ip) {
+      const n = (this.ipConnections.get(client.ip) || 1) - 1;
+      if (n <= 0) this.ipConnections.delete(client.ip);
+      else this.ipConnections.set(client.ip, n);
+    }
 
     if (client.bouncerEnabled && client.account) {
       this.bouncer.detachSession(client, reason);
@@ -362,6 +384,23 @@ class ShadowIRCServer {
         break;
       case 'KICK':
         this.handleKick(client, args[0], args[1], args[2]);
+        break;
+      case 'KILL':
+        this.handleKill(client, args[0], args[1]);
+        break;
+      case 'WHO':
+        this.handleWho(client, args[0]);
+        break;
+      case 'AWAY':
+        this.handleAway(client, args[0]);
+        break;
+      case 'USERHOST':
+        this.handleUserhost(client, args);
+        break;
+      case 'ISON':
+        this.handleIson(client, args);
+        break;
+      case 'PASS':
         break;
 
       // Service Shortcuts
@@ -964,6 +1003,79 @@ class ShadowIRCServer {
       channel.voice.delete(victim);
       victim.channels.delete(channel.name.toLowerCase());
     }
+  }
+
+  handleKill(client, targetNick, reason) {
+    if (!client.isOper) {
+      this.send(client, `:${this.serverName} 481 ${client.nickname} :Permission Denied — you're not an IRC operator`);
+      return;
+    }
+    if (!targetNick) {
+      this.send(client, `:${this.serverName} 461 ${client.nickname} KILL :Not enough parameters`);
+      return;
+    }
+    const target = this.nicknames.get(targetNick.toLowerCase());
+    if (!target) {
+      this.send(client, `:${this.serverName} 401 ${client.nickname} ${targetNick} :No such nick`);
+      return;
+    }
+    const killReason = reason || 'Operator KILL';
+    this.send(target, `ERROR :Closing Link: ${target.hostname} (Killed (${client.nickname} (${killReason})))`);
+    this.handleDisconnect(target, `Killed by ${client.nickname}: ${killReason}`);
+    this.send(client, `:${this.serverName} NOTICE ${client.nickname} :*** ${targetNick} has been killed (${killReason})`);
+  }
+
+  handleWho(client, mask) {
+    if (!this.requireAuth(client)) return;
+    const target = mask || '*';
+
+    if (target.startsWith('#')) {
+      const channel = this.channels.get(target.toLowerCase());
+      if (channel) {
+        for (const member of channel.members) {
+          const flags = 'H' + (channel.ops.has(member) ? '@' : (channel.voice.has(member) ? '+' : ''));
+          this.send(client, `:${this.serverName} 352 ${client.nickname} ${target} ${member.username} ${member.hostname} ${this.serverName} ${member.nickname} ${flags} :0 ${member.realname}`);
+        }
+      }
+    } else {
+      for (const c of this.clients.values()) {
+        if (!c.registered) continue;
+        const flags = 'H' + (c.isOper ? '*' : '');
+        this.send(client, `:${this.serverName} 352 ${client.nickname} * ${c.username} ${c.hostname} ${this.serverName} ${c.nickname} ${flags} :0 ${c.realname}`);
+      }
+    }
+    this.send(client, `:${this.serverName} 315 ${client.nickname} ${target} :End of /WHO list`);
+  }
+
+  handleAway(client, message) {
+    if (!this.requireAuth(client)) return;
+    if (message) {
+      client.awayMessage = message;
+      this.send(client, `:${this.serverName} 306 ${client.nickname} :You have been marked as being away`);
+    } else {
+      client.awayMessage = null;
+      this.send(client, `:${this.serverName} 305 ${client.nickname} :You are no longer marked as being away`);
+    }
+  }
+
+  handleUserhost(client, nicks) {
+    if (!this.requireAuth(client)) return;
+    const results = [];
+    for (const nick of nicks.slice(0, 5)) {
+      const target = this.nicknames.get(nick.toLowerCase());
+      if (target) {
+        const away = target.awayMessage ? '-' : '+';
+        const oper = target.isOper ? '*' : '';
+        results.push(`${target.nickname}${oper}=${away}${target.username}@${target.hostname}`);
+      }
+    }
+    this.send(client, `:${this.serverName} 302 ${client.nickname} :${results.join(' ')}`);
+  }
+
+  handleIson(client, nicks) {
+    if (!this.requireAuth(client)) return;
+    const online = nicks.filter(n => this.nicknames.has(n.toLowerCase())).join(' ');
+    this.send(client, `:${this.serverName} 303 ${client.nickname} :${online}`);
   }
 
   requireAuth(client) {
