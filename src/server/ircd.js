@@ -77,6 +77,9 @@ class ShadowIRCServer {
 
     // JEV: per-nick recent message cache (last 10 per channel, for context)
     this.jevMsgCache = new Map(); // `${nickLower}:${chanLower}` -> string[]
+
+    // Invite tokens: token -> { nick, createdAt, expiresAt, uses, maxUses }
+    this.inviteTokens = new Map();
     
     this.motd = [
       "==========================================================================",
@@ -467,6 +470,9 @@ class ShadowIRCServer {
         break;
       case 'JEVASK':
         this.handleJevAsk(client, args.join(' '));
+        break;
+      case 'INVITELINK':
+        this.handleInviteLink(client, args[0]);
         break;
 
       // Service Shortcuts
@@ -1335,7 +1341,47 @@ class ShadowIRCServer {
     }
   }
 
+  handleInviteLink(client, expiresArg) {
+    if (!client.isOper) {
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :INVITELINK requires oper status`);
+      return;
+    }
+    const hours = Math.max(1, Math.min(168, parseInt(expiresArg, 10) || 24));
+    const token = crypto.randomBytes(24).toString('hex');
+    const now = Date.now();
+    this.inviteTokens.set(token, {
+      nick: client.nickname,
+      createdAt: now,
+      expiresAt: now + hours * 3600 * 1000,
+      uses: 0,
+      maxUses: 10
+    });
+    // Expire cleanup
+    setTimeout(() => this.inviteTokens.delete(token), hours * 3600 * 1000);
+    const url = `https://app.shadowspace.space?invite=${token}`;
+    this.send(client, `:${this.serverName} NOTICE ${client.nickname} :Invite link (${hours}h, max 10 uses): ${url}`);
+  }
+
   handleHttpRequest(req, res) {
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET' };
+
+    // Invite token validation API
+    if (req.url && req.url.startsWith('/api/invite/check')) {
+      const qs = new URLSearchParams(req.url.split('?')[1] || '');
+      const token = (qs.get('token') || '').replace(/[^a-f0-9]/gi, '');
+      const entry = token ? this.inviteTokens.get(token) : null;
+      const now = Date.now();
+      if (!entry || now > entry.expiresAt || entry.uses >= entry.maxUses) {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
+        res.end(JSON.stringify({ valid: false }));
+        return;
+      }
+      entry.uses++;
+      res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
+      res.end(JSON.stringify({ valid: true, network: this.serverName, by: entry.nick }));
+      return;
+    }
+
     const url = req.url === '/' ? '/index.html' : req.url;
     const safePath = path.normalize(url).replace(/^(\.\.[/\\])+/, '');
     const clientDir = path.join(__dirname, '..', '..', 'src-desktop');
