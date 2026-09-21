@@ -14,6 +14,7 @@ import { IRCServicesEngine } from './services.js';
 import { IRCv3HistoryEngine, IRCv3CapNegotiator } from './ircv3.js';
 import { BouncerEngine } from './bouncer.js';
 import { BanEngine } from './banEngine.js';
+import { evaluateMessage, assessUser, askDecision } from './jev.js';
 
 /**
  * SHADOW-IRCD v4.0: Deep Space Cosmic Nebula IRC Server Daemon
@@ -73,6 +74,9 @@ class ShadowIRCServer {
     // Rate Limiting
     this.maxMessageRate = 12;
     this.maxConnectionsPerIp = 5;
+
+    // JEV: per-nick recent message cache (last 10 per channel, for context)
+    this.jevMsgCache = new Map(); // `${nickLower}:${chanLower}` -> string[]
     
     this.motd = [
       "==========================================================================",
@@ -402,6 +406,12 @@ class ShadowIRCServer {
         break;
       case 'PASS':
         break;
+      case 'JEVCHECK':
+        this.handleJevCheck(client, args[0]);
+        break;
+      case 'JEVASK':
+        this.handleJevAsk(client, args.join(' '));
+        break;
 
       // Service Shortcuts
       case 'NS':
@@ -530,6 +540,7 @@ class ShadowIRCServer {
   checkRegistration(client) {
     if (!client.registered && client.nickname && client.username) {
       client.registered = true;
+      client.connectedAt = Date.now();
 
       // ZNC-style bouncer: if this nick has a detached session (disconnected
       // while /bouncer enable was active), restore channel membership and
@@ -753,6 +764,44 @@ class ShadowIRCServer {
 
       if (client.enabledCaps && client.enabledCaps.has('echo-message')) {
         this.send(client, msgFormatted);
+      }
+
+      // JEV auto-mod (fire-and-forget, never blocks message routing)
+      if (!isNotice && !client.isOper && process.env.JEV_API_KEY) {
+        const cacheKey = `${client.nickname.toLowerCase()}:${chanLower}`;
+        const history = this.jevMsgCache.get(cacheKey) || [];
+        history.push(message);
+        if (history.length > 10) history.shift();
+        this.jevMsgCache.set(cacheKey, history);
+
+        evaluateMessage(client.nickname, client.hostname, target, message, history.slice(0, -1))
+          .then(verdict => {
+            if (!verdict || verdict.action === 'ignore' || verdict.confidence < 0.75) return;
+            if (verdict.action === 'warn') {
+              this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[AutoMod] Warning: your last message was flagged. Please review the rules.`);
+            } else if (verdict.action === 'kick' && channel.members.has(client)) {
+              const kickMsg = `:${this.serverName} KICK ${target} ${client.nickname} :AutoMod: message policy violation`;
+              this.broadcastChannel(channel, kickMsg);
+              channel.members.delete(client);
+              channel.ops.delete(client);
+              channel.voice.delete(client);
+              client.channels.delete(chanLower);
+            } else if (verdict.action === 'ban') {
+              if (!channel.bans) channel.bans = new Set();
+              channel.bans.add(`*!*@${client.hostname}`);
+              const modeMsg = `:${this.serverName} MODE ${target} +b *!*@${client.hostname}`;
+              this.broadcastChannel(channel, modeMsg);
+              const kickMsg = `:${this.serverName} KICK ${target} ${client.nickname} :AutoMod: banned`;
+              if (channel.members.has(client)) {
+                this.broadcastChannel(channel, kickMsg);
+                channel.members.delete(client);
+                channel.ops.delete(client);
+                channel.voice.delete(client);
+                client.channels.delete(chanLower);
+              }
+            }
+          })
+          .catch(() => {});
       }
     } else {
       // Check bouncer state first: a detached nick still has a stale (dead)
@@ -1076,6 +1125,76 @@ class ShadowIRCServer {
     if (!this.requireAuth(client)) return;
     const online = nicks.filter(n => this.nicknames.has(n.toLowerCase())).join(' ');
     this.send(client, `:${this.serverName} 303 ${client.nickname} :${online}`);
+  }
+
+  handleJevCheck(client, targetNick) {
+    if (!client.isOper) {
+      this.send(client, `:${this.serverName} 481 ${client.nickname} :Permission Denied`);
+      return;
+    }
+    if (!targetNick) {
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :Usage: JEVCHECK <nick>`);
+      return;
+    }
+    const target = this.nicknames.get(targetNick.toLowerCase());
+    if (!target) {
+      this.send(client, `:${this.serverName} 401 ${client.nickname} ${targetNick} :No such nick`);
+      return;
+    }
+    this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Assessing ${targetNick}...`);
+
+    const msgs = [];
+    for (const [key, history] of this.jevMsgCache) {
+      if (key.startsWith(target.nickname.toLowerCase() + ':')) {
+        const chan = key.split(':')[1];
+        history.forEach(m => msgs.push({ channel: chan, text: m }));
+      }
+    }
+
+    const joinAgeMin = target.connectedAt
+      ? Math.floor((Date.now() - target.connectedAt) / 60000)
+      : 0;
+
+    assessUser(target.nickname, target.hostname, target.ip, msgs, target.channels?.size ?? 0, joinAgeMin)
+      .then(report => {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${report}`);
+      })
+      .catch(() => {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Error contacting JEV.`);
+      });
+  }
+
+  handleJevAsk(client, question) {
+    if (!client.isOper) {
+      this.send(client, `:${this.serverName} 481 ${client.nickname} :Permission Denied`);
+      return;
+    }
+    if (!question) {
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :Usage: JEVASK <question about the network>`);
+      return;
+    }
+
+    const connectedNicks = [...this.nicknames.keys()].join(', ') || 'none';
+    const channelList = [...this.channels.entries()]
+      .map(([name, ch]) => `${name}(${ch.members.size})`)
+      .join(', ') || 'none';
+
+    const state = [
+      `Shadow IRC network state:`,
+      `Connected users (${this.nicknames.size}): ${connectedNicks}`,
+      `Active channels: ${channelList}`,
+      `Question from oper ${client.nickname}: ${question}`
+    ].join('\n');
+
+    this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Thinking...`);
+
+    askDecision(state, question)
+      .then(answer => {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${answer}`);
+      })
+      .catch(() => {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Error contacting JEV.`);
+      });
   }
 
   requireAuth(client) {
