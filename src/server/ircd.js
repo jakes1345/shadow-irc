@@ -14,7 +14,7 @@ import { IRCServicesEngine } from './services.js';
 import { IRCv3HistoryEngine, IRCv3CapNegotiator } from './ircv3.js';
 import { BouncerEngine } from './bouncer.js';
 import { BanEngine } from './banEngine.js';
-import { evaluateMessage, assessUser, askDecision } from './jev.js';
+import { evaluateMessage, assessUser, askDecision, screenConnection, validateNick, evaluateJoin, evaluateKickEscalation, sweepUsers } from './jev.js';
 
 /**
  * SHADOW-IRCD v4.0: Deep Space Cosmic Nebula IRC Server Daemon
@@ -112,6 +112,47 @@ class ShadowIRCServer {
 
     // Cloudflare/Fly proxies drop idle sockets after ~100s; ping well inside that window
     this.pingInterval = setInterval(() => this.pingClients(), 30000);
+
+    // JEV periodic sweep: scan all users every 5 minutes, alert opers of threats
+    if (process.env.JEV_API_KEY) {
+      setInterval(() => this.jevSweep(), 5 * 60 * 1000);
+    }
+  }
+
+  jevSweep() {
+    const users = [];
+    for (const client of this.clients.values()) {
+      if (!client.registered || client.isOper) continue;
+      const ageMin = client.connectedAt ? Math.floor((Date.now() - client.connectedAt) / 60000) : 0;
+      let msgCount = 0;
+      const recentMsgs = [];
+      for (const [key, history] of this.jevMsgCache) {
+        if (key.startsWith(client.nickname?.toLowerCase() + ':')) {
+          msgCount += history.length;
+          recentMsgs.push(...history.slice(-3));
+        }
+      }
+      users.push({
+        nick: client.nickname,
+        host: client.hostname,
+        ageMin,
+        channelCount: client.channels.size,
+        msgCount,
+        recentMsgs
+      });
+    }
+    if (users.length === 0) return;
+
+    sweepUsers(users).then(threats => {
+      if (threats.length === 0) return;
+      for (const client of this.clients.values()) {
+        if (!client.isOper || !client.registered) continue;
+        for (const t of threats) {
+          const flag = t.flag === 'HIGH' ? '🔴' : '🟡';
+          this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV Sweep] ${flag} ${t.nick} — threat score ${(t.score * 100).toFixed(0)}% (${t.flag})`);
+        }
+      }
+    }).catch(() => {});
   }
 
   pingClients() {
@@ -137,6 +178,14 @@ class ShadowIRCServer {
     this.ipConnections.set(ip, count + 1);
     const client = this.createClientState(socket, ip, 'TCP');
 
+    // JEV connection screen (async, drop if high-confidence threat)
+    screenConnection(ip, null).then(verdict => {
+      if (verdict.block && this.clients.has(socket)) {
+        socket.write('ERROR :Connection refused by network policy\r\n');
+        socket.destroy();
+      }
+    }).catch(() => {});
+
     socket.on('data', (chunk) => {
       this.processRawInput(client, chunk.toString('utf8'));
     });
@@ -155,6 +204,13 @@ class ShadowIRCServer {
     }
     this.ipConnections.set(ip, count + 1);
     const client = this.createClientState(ws, ip, 'WebSocket');
+
+    // JEV connection screen
+    screenConnection(ip, null).then(verdict => {
+      if (verdict.block && this.clients.has(ws)) {
+        ws.close(1008, 'Connection refused by network policy');
+      }
+    }).catch(() => {});
 
     ws.on('message', (message) => {
       this.processRawInput(client, message.toString('utf8'));
@@ -487,6 +543,17 @@ class ShadowIRCServer {
     client.nickname = nick;
     this.nicknames.set(nickLower, client);
 
+    // JEV nick impersonation check (async, silent deny if suspicious)
+    if (!client.isOper) {
+      validateNick(nick).then(verdict => {
+        if (verdict.suspicious && this.clients.has(client.connection)) {
+          this.send(client, `:${this.serverName} 433 * ${nick} :Nickname not allowed`);
+          client.nickname = null;
+          this.nicknames.delete(nickLower);
+        }
+      }).catch(() => {});
+    }
+
     if (oldNick) {
       const nickChangeMsg = `:${oldNick}!${client.username}@${client.hostname} NICK :${nick}`;
       this.send(client, nickChangeMsg);
@@ -629,6 +696,23 @@ class ShadowIRCServer {
       if (BanEngine.isBanned(client, channel)) {
         this.send(client, `:${this.serverName} 474 ${client.nickname} ${name} :Cannot join channel (+b) - banned`);
         continue;
+      }
+
+      // JEV join gate (async — if JEV denies, kick them after join completes)
+      if (!client.isOper && !isFirst && process.env.JEV_API_KEY) {
+        const ageMin = client.connectedAt ? Math.floor((Date.now() - client.connectedAt) / 60000) : 0;
+        evaluateJoin(client.nickname, client.hostname, name, channel.topic, client.msgCount, ageMin)
+          .then(verdict => {
+            if (!verdict.allow && channel.members.has(client)) {
+              const kickMsg = `:${this.serverName} KICK ${name} ${client.nickname} :${verdict.reason}`;
+              this.broadcastChannel(channel, kickMsg);
+              channel.members.delete(client);
+              channel.ops.delete(client);
+              channel.voice.delete(client);
+              client.channels.delete(chanLower);
+            }
+          })
+          .catch(() => {});
       }
 
       // Check Invite-Only Mode (+i)
@@ -1051,6 +1135,22 @@ class ShadowIRCServer {
       channel.ops.delete(victim);
       channel.voice.delete(victim);
       victim.channels.delete(channel.name.toLowerCase());
+
+      // JEV kick escalation: should the kick become a ban?
+      if (process.env.JEV_API_KEY) {
+        const cacheKey = `${victim.nickname.toLowerCase()}:${channel.name.toLowerCase()}`;
+        const history = this.jevMsgCache.get(cacheKey) || [];
+        evaluateKickEscalation(victim.nickname, victim.hostname, channel.name, kickReason, history)
+          .then(verdict => {
+            if (verdict.ban) {
+              if (!channel.bans) channel.bans = new Set();
+              channel.bans.add(`*!*@${victim.hostname}`);
+              this.broadcastChannel(channel, `:${this.serverName} MODE ${channel.name} +b *!*@${victim.hostname}`);
+              this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Auto-ban applied for ${victim.nickname} (${(verdict.confidence * 100).toFixed(0)}% confidence)`);
+            }
+          })
+          .catch(() => {});
+      }
     }
   }
 
