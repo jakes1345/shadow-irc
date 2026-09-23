@@ -29,8 +29,9 @@ export class ShadowCrypto {
 
       return '+OK ' + Buffer.from(JSON.stringify(payload)).toString('base64');
     } catch (err) {
-      console.error('Encryption error:', err);
-      return text;
+      // Never fall back to plaintext: the caller believes E2EE is on, so
+      // emitting the cleartext here would silently publish it.
+      throw new Error('encryption failed: ' + err.message);
     }
   }
 

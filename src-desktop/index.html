@@ -663,7 +663,7 @@
     <div id="sidebar-right">
       <div class="user-section-title">
         <span>CREW / USERS</span>
-        <span id="user-count" style="color: var(--accent-cyan);">1</span>
+        <span id="user-count" style="color: var(--accent);">1</span>
       </div>
       <ul class="user-list" id="user-list"></ul>
     </div>
@@ -672,65 +672,64 @@
   <!-- Super-View Operator Command Center Modal Overlay -->
   <div id="superview-modal" class="modal-overlay" style="display:none; align-items:center; justify-content:center;">
     <div class="modal-card" style="width: 820px; max-width: 92vw; max-height: 88vh; overflow-y: auto;">
-      <div class="modal-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 14px;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 14px;">
         <div style="display:flex; align-items:center; gap: 10px;">
           <span style="font-size:24px;">👑</span>
           <div>
-            <h3 style="margin:0; font-family:var(--font-heading); color: var(--accent-cyan);">SUPER-VIEW OPERATOR COMMAND CENTER</h3>
-            <span style="font-size: 11px; color: var(--text-muted);">Godmode Telemetry, Dynamic Command Customizer & Network Controls</span>
+            <h3 style="margin:0; font-family:var(--font-brand); color: var(--accent);">SUPER-VIEW OPERATOR COMMAND CENTER</h3>
+            <span style="font-size: 11px; color: var(--muted);">Godmode Telemetry, Dynamic Command Customizer & Network Controls</span>
           </div>
         </div>
         <button class="close-btn" onclick="toggleSuperViewModal(false)">✖</button>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0;">
-        <div style="background: rgba(125, 211, 232, 0.08); border: 1px solid var(--accent-cyan); border-radius: 8px; padding: 12px;">
-          <div style="font-size: 10px; color: var(--accent-cyan); font-weight: 700;">NETWORK NODE</div>
+        <div style="background: rgba(125, 211, 232, 0.08); border: 1px solid var(--accent); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--accent); font-weight: 700;">NETWORK NODE</div>
           <div style="font-size: 14px; font-weight: 700; margin-top: 4px;" id="super-node-val">shadowspace.space</div>
         </div>
-        <div style="background: rgba(167, 139, 250, 0.08); border: 1px solid var(--accent-violet); border-radius: 8px; padding: 12px;">
-          <div style="font-size: 10px; color: var(--accent-violet); font-weight: 700;">OPERATOR PRIVILEGES</div>
-          <div style="font-size: 14px; font-weight: 700; color: var(--accent-green); margin-top: 4px;">👑 OperServ (+o)</div>
+        <div style="background: rgba(167, 139, 250, 0.08); border: 1px solid var(--accent); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--accent); font-weight: 700;">OPERATOR PRIVILEGES</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--green); margin-top: 4px;">👑 OperServ (+o)</div>
         </div>
-        <div style="background: rgba(232, 121, 159, 0.08); border: 1px solid var(--accent-magenta); border-radius: 8px; padding: 12px;">
-          <div style="font-size: 10px; color: var(--accent-magenta); font-weight: 700;">E2EE ENGINE</div>
+        <div style="background: rgba(232, 121, 159, 0.08); border: 1px solid var(--orange); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--orange); font-weight: 700;">E2EE ENGINE</div>
           <div style="font-size: 14px; font-weight: 700; margin-top: 4px;" id="super-e2ee-val">AES-256-GCM (0 active)</div>
         </div>
-        <div style="background: rgba(94, 230, 168, 0.08); border: 1px solid var(--accent-green); border-radius: 8px; padding: 12px;">
-          <div style="font-size: 10px; color: var(--accent-green); font-weight: 700;">IP MASK CLOAKING</div>
+        <div style="background: rgba(94, 230, 168, 0.08); border: 1px solid var(--green); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 10px; color: var(--green); font-weight: 700;">IP MASK CLOAKING</div>
           <div style="font-size: 14px; font-weight: 700; margin-top: 4px;">100% SHA256 Active</div>
         </div>
       </div>
 
       <div style="margin-bottom: 20px;">
-        <h4 style="color: var(--accent-cyan); margin-bottom: 10px;">⚡ Quick Operator Actions</h4>
+        <h4 style="color: var(--accent); margin-bottom: 10px;">⚡ Quick Operator Actions</h4>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px;" onclick="execOperCmd('/oper')">👑 Authenticate Oper</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(167, 139, 250, 0.4);" onclick="promptGlobalBroadcast()">📢 Global Broadcast</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(94, 230, 168, 0.4);" onclick="execOperCmd('/stats')">📊 Server Stats</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(232, 121, 159, 0.4);" onclick="promptOperKill()">⚡ Kill User</button>
           <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(255, 0, 0, 0.6);" onclick="sendQuickCmd('/nuke')">🚨 Anti-Forensic Purge</button>
-          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(50, 200, 100, 0.5);" onclick="fetchNetworkIPs()">🔍 Network Real IPs</button>
+          <button class="send-btn" style="padding: 6px 14px; font-size: 12px; background: rgba(50, 200, 100, 0.5);" onclick="fetchNetworkIPs()">Connection Log</button>
         </div>
       </div>
 
-      <div style="background: rgba(0, 0, 0, 0.5); border: 1px solid var(--accent-green); border-radius: 10px; padding: 16px; margin-bottom: 16px;">
-        <h4 style="color: var(--accent-green); margin-bottom: 8px;">🔍 Network Intelligence — Real IPs</h4>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Real IPs are shown regardless of VPN, VPS, or Cloudflare proxy. Cloudflare's CF-Connecting-IP header is used to recover the origin IP through the proxy.</p>
-        <div id="realip-output" style="font-family: var(--font-code); font-size: 12px; color: var(--accent-green); max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 10px; white-space: pre-wrap;">Click "Network Real IPs" to fetch...</div>
+      <div style="background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+        <h4 style="color: var(--green); margin-bottom: 8px; font-family: var(--font-mono); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;">Connection Log</h4>
+        <div id="realip-output" style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--green); max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.4); border-radius: 4px; padding: 10px; white-space: pre-wrap;">—</div>
       </div>
 
-      <div style="background: rgba(0, 0, 0, 0.5); border: 1px solid var(--glass-border); border-radius: 10px; padding: 16px;">
-        <h4 style="color: var(--accent-violet); margin-bottom: 8px;">✨ Live Dynamic Command Customizer</h4>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Add custom slash commands on the fly. Executing the command in chat will instantly broadcast the response!</p>
+      <div style="background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border); border-radius: 10px; padding: 16px;">
+        <h4 style="color: var(--accent); margin-bottom: 8px;">✨ Live Dynamic Command Customizer</h4>
+        <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">Add custom slash commands on the fly. Executing the command in chat will instantly broadcast the response!</p>
         
         <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-          <input type="text" id="new-cmd-name" placeholder="Command (e.g. /rules)" style="flex: 1; background: rgba(8, 10, 22,0.8); border: 1px solid var(--glass-border); color: #fff; padding: 8px; border-radius: 6px; font-family: var(--font-code); font-size: 12px;" />
-          <input type="text" id="new-cmd-reply" placeholder="Reply text message..." style="flex: 2; background: rgba(8, 10, 22,0.8); border: 1px solid var(--glass-border); color: #fff; padding: 8px; border-radius: 6px; font-family: var(--font-code); font-size: 12px;" />
+          <input type="text" id="new-cmd-name" placeholder="Command (e.g. /rules)" style="flex: 1; background: rgba(8, 10, 22,0.8); border: 1px solid var(--border); color: #fff; padding: 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px;" />
+          <input type="text" id="new-cmd-reply" placeholder="Reply text message..." style="flex: 2; background: rgba(8, 10, 22,0.8); border: 1px solid var(--border); color: #fff; padding: 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px;" />
           <button class="send-btn" style="padding: 8px 16px; font-size: 12px;" onclick="addCustomCommand()">+ ADD</button>
         </div>
 
-        <div style="font-size: 11px; color: var(--accent-cyan); font-weight: 700; margin-bottom: 6px;">Active Custom Commands:</div>
+        <div style="font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 6px;">Active Custom Commands:</div>
         <div id="custom-cmds-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto;">
           <!-- Loaded dynamically -->
         </div>
@@ -756,7 +755,7 @@
 
       <!-- Step 1 -->
       <div class="guide-content" id="gstep-1">
-        <h4 style="color: var(--accent-cyan);">🌌 1. Zero-Data Privacy Architecture</h4>
+        <h4 style="color: var(--accent);">🌌 1. Zero-Data Privacy Architecture</h4>
         <p>SHADOW-IRC is a 100% free, open-source cross-platform suite with <strong>zero email, zero phone number, and zero personal data collection</strong>.</p>
         <p>All authentication happens in-protocol via built-in Services (`NickServ`, `ChanServ`). Your IP address is automatically cloaked as <code>user@cosmos/shadow/x-hash</code> across all channels.</p>
         <div class="guide-callout">
@@ -766,9 +765,9 @@
 
       <!-- Step 2 -->
       <div class="guide-content" id="gstep-2" style="display:none;">
-        <h4 style="color: var(--accent-cyan);">🛡️ 2. NickServ: Device-Key Registration</h4>
+        <h4 style="color: var(--accent);">🛡️ 2. NickServ: Device-Key Registration</h4>
         <p>Register your nickname to this device. Your browser creates a private key it can sign with but never reveal; the server stores only the public half — no password, no email, no timestamps.</p>
-        <code>/ns REGISTERKEY</code> <span style="color: var(--text-muted);">(the Register button does this for you)</span>
+        <code>/ns REGISTERKEY</code> <span style="color: var(--muted);">(the Register button does this for you)</span>
         <p>Reconnecting identifies you automatically. To add a second device, click Register there and confirm once with your password, or from an identified device:</p>
         <code>/ns ADDKEY &lt;pubkey&gt; &nbsp;·&nbsp; /ns LISTKEYS &nbsp;·&nbsp; /ns DELKEY &lt;fingerprint&gt;</code>
         <p>Password fallback for native IRC clients: <code>/ns REGISTER &lt;password&gt;</code> and <code>/ns IDENTIFY &lt;password&gt;</code>.</p>
@@ -777,7 +776,7 @@
 
       <!-- Step 3 -->
       <div class="guide-content" id="gstep-3" style="display:none;">
-        <h4 style="color: var(--accent-cyan);">👑 3. ChanServ: Channel Ownership & Operator Privileges</h4>
+        <h4 style="color: var(--accent);">👑 3. ChanServ: Channel Ownership & Operator Privileges</h4>
         <p>Register a channel to become its permanent Founder with <strong>@Operator</strong> rights.</p>
         <code>/cs REGISTER #channel [description]</code>
         <p>Grant Operator status to crew members:</p>
@@ -787,7 +786,7 @@
 
       <!-- Step 4 -->
       <div class="guide-content" id="gstep-4" style="display:none;">
-        <h4 style="color: var(--accent-cyan);">⚡ 4. Server Operator (/oper) Authorization</h4>
+        <h4 style="color: var(--accent);">⚡ 4. Server Operator (/oper) Authorization</h4>
         <p>Operator status belongs to the Network Master account. Identify as <strong>Shadow</strong> (device key or password) and it is granted automatically — there is no shared oper password.</p>
         <code>/oper</code>
         <p>Broadcast network notices to all connected nodes:</p>
@@ -797,7 +796,7 @@
 
       <!-- Step 5 -->
       <div class="guide-content" id="gstep-5" style="display:none;">
-        <h4 style="color: var(--accent-cyan);">🔒 5. E2EE Encryption & ZNC 24/7 Bouncer</h4>
+        <h4 style="color: var(--accent);">🔒 5. E2EE Encryption & ZNC 24/7 Bouncer</h4>
         <p>Set a local client encryption key for channel privacy:</p>
         <code>/encrypt cosmic_secret_key</code>
         <p>Enable 24/7 Bouncer persistence so unread messages queue while offline:</p>
@@ -807,7 +806,7 @@
 
       <div class="modal-footer">
         <button class="quick-btn" onclick="prevGuideStep()">⬅ Previous</button>
-        <span id="step-indicator" style="font-size: 12px; color: var(--text-dim);">Step 1 of 5</span>
+        <span id="step-indicator" style="font-size: 12px; color: var(--faint);">Step 1 of 5</span>
         <button class="quick-btn" onclick="nextGuideStep()">Next ➡</button>
       </div>
     </div>
@@ -1194,7 +1193,7 @@
       const hasKey = channelKeys.has(currentWindow.toLowerCase());
       const el = document.getElementById('e2ee-status');
       el.innerText = hasKey ? ('AES-256-GCM ON (' + currentWindow + ')') : 'OFF (/encrypt <key>)';
-      el.style.color = hasKey ? 'var(--accent-green)' : 'var(--text-muted)';
+      el.style.color = hasKey ? 'var(--green)' : 'var(--muted)';
     }
 
     // Welcome Cards setup
@@ -1275,7 +1274,7 @@
           if (realipNotice) {
             const out = document.getElementById('realip-output');
             if (out) {
-              if (out.textContent === 'Fetching...' || out.textContent === 'Click "Network Real IPs" to fetch...') out.textContent = '';
+              if (out.textContent === 'Fetching...' || out.textContent === '—') out.textContent = '';
               out.textContent += realipNotice[1] + '\n';
               out.scrollTop = out.scrollHeight;
             }
@@ -1670,9 +1669,7 @@
           return `<div class="msg-row system"><span class="msg-ts">${hhmm}</span><span class="msg-body">${escapeHtml(m.body)}</span></div>`;
         } else {
           const nickStyle = `color:${nickColor(rawNick)}`;
-          const isE2ee = m.body.startsWith('ENC·') || m.body.startsWith('ENC·');
-          const rowCls = isE2ee ? 'msg-row e2ee' : 'msg-row';
-          return `<div class="${rowCls}"><span class="msg-ts">${hhmm}</span><span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}" style="${nickStyle}" ${nickHandlers}>${escapeHtml(rawNick)}</span><span class="msg-body">${escapeHtml(m.body)}</span></div>`;
+          return `<div class="msg-row"><span class="msg-ts">${hhmm}</span><span class="msg-nick ${isOp?'op':(isVoice?'voice':'')}" style="${nickStyle}" ${nickHandlers}>${escapeHtml(rawNick)}</span><span class="msg-body">${escapeHtml(m.body)}</span></div>`;
         }
       }).join('');
 
@@ -1699,7 +1696,7 @@
           <li class="user-item ${isOp?'op':(isVoice?'voice':'')}${isIgnored ? ' ignored' : ''}" onclick="openUserMenu('${attr}', event)" oncontextmenu="openUserMenu('${attr}', event)" title="${attr}">
             <div class="user-role-dot"></div>
             <span>${escapeHtml(u)}</span>
-            <span style="font-size: 11px; color: var(--text-dim); margin-left: auto;">⋯</span>
+            <span style="font-size: 11px; color: var(--faint); margin-left: auto;">⋯</span>
           </li>`;
       }).join('');
     }
@@ -1808,9 +1805,9 @@
       container.innerHTML = '';
       Object.keys(customCmds).forEach(name => {
         const item = document.createElement('div');
-        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: var(--font-code);';
-        item.innerHTML = `<div><strong style="color: var(--accent-cyan);">${name}</strong> &rarr; <span style="color: var(--text-muted);">${escapeHtml(customCmds[name])}</span></div>
-                          <button style="background: none; border: none; color: var(--accent-magenta); cursor: pointer; font-weight: bold;" onclick="deleteCustomCommand('${name}')">✖</button>`;
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: var(--font-mono);';
+        item.innerHTML = `<div><strong style="color: var(--accent);">${name}</strong> &rarr; <span style="color: var(--muted);">${escapeHtml(customCmds[name])}</span></div>
+                          <button style="background: none; border: none; color: var(--orange); cursor: pointer; font-weight: bold;" onclick="deleteCustomCommand('${name}')">✖</button>`;
         container.appendChild(item);
       });
     }
@@ -1885,6 +1882,14 @@
 
     function prevGuideStep() {
       if (currentGuideStep > 1) switchGuideStep(currentGuideStep - 1);
+    }
+
+    const NICK_PALETTE = ['#a78bfa','#38bdf8','#34d399','#fb923c','#f472b6','#c4b5fd','#5eead4','#fbbf24','#818cf8','#f87171'];
+    function nickColor(nick) {
+      let h = 0;
+      const s = String(nick).toLowerCase();
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return NICK_PALETTE[Math.abs(h) % NICK_PALETTE.length];
     }
 
     function escapeHtml(str) {

@@ -86,7 +86,11 @@ export class IRCServicesEngine {
         for (const [k, v] of Object.entries(parsed.vhosts || {})) this.vhosts.set(k, v);
       }
     } catch (err) {
-      console.error('[SERVICES] could not load services_db:', err.message);
+      // A DB exists but could not be read (wrong SERVICES_DB_KEY, corrupt file).
+      // Never fall through to a write — ensureMasterAccount() would overwrite
+      // every account, channel and memo with an empty set.
+      this.readOnly = true;
+      console.error('[SERVICES] could not load services_db, refusing to overwrite it:', err.message);
     }
     this.ensureMasterAccount();
   }

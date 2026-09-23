@@ -29,7 +29,7 @@ import { evaluateMessage, assessUser, askDecision, screenConnection, validateNic
  *  - IRCv3 Specification Suite (server-time, echo-message, chathistory, sasl)
  *  - Ring Buffer History Engine (500 items per channel with scrollback replay)
  *  - ZNC-style 24/7 Bouncer Session Persistence
- *  - Wildcard & CIDR Ban Mask Engine (+b)
+ *  - Wildcard Ban Mask Engine (+b)
  */
 
 // Cloudflare published egress ranges (https://www.cloudflare.com/ips-v4).
@@ -53,8 +53,11 @@ function resolveClientIp(req) {
 
 class ShadowIRCServer {
   constructor(options = {}) {
-    this.port = options.port || (process.env.TCP_PORT ? parseInt(process.env.TCP_PORT, 10) : 6667);
-    this.webPort = options.webPort || (process.env.PORT ? parseInt(process.env.PORT, 10) : 8888);
+    // Deploy env (fly.toml, Dockerfile) sets PORT=6667 for IRC and WEB_PORT=8888
+    // for HTTP/WS. Keep these fallbacks consistent with that or the two servers
+    // race for the same port when constructed without explicit options.
+    this.port = options.port || parseInt(process.env.PORT || process.env.TCP_PORT || '6667', 10);
+    this.webPort = options.webPort || parseInt(process.env.WEB_PORT || '8888', 10);
     this.host = options.host || '0.0.0.0';
     this.serverName = options.serverName || 'shadowspace.space';
     this.version = 'shadow-ircd-4.0.0-cosmic-space';
@@ -291,9 +294,21 @@ class ShadowIRCServer {
     }
   }
 
+  // jevMsgCache is keyed `${nick}:${channel}`; without this the map keeps an
+  // entry for every nick/channel pair that ever spoke, for the life of the process.
+  dropJevCacheFor(nick) {
+    if (!nick) return;
+    const prefix = nick.toLowerCase() + ':';
+    for (const key of this.jevMsgCache.keys()) {
+      if (key.startsWith(prefix)) this.jevMsgCache.delete(key);
+    }
+  }
+
   handleDisconnect(client, reason) {
     if (!this.clients.has(client.connection)) return;
     if (client.shadowTimer) clearTimeout(client.shadowTimer);
+
+    this.dropJevCacheFor(client.nickname);
 
     if (client.ip) {
       const n = (this.ipConnections.get(client.ip) || 1) - 1;
@@ -547,8 +562,9 @@ class ShadowIRCServer {
     const oldNick = client.nickname;
     if (oldNick) {
       this.nicknames.delete(oldNick.toLowerCase());
+      this.dropJevCacheFor(oldNick);
     }
-    
+
     client.nickname = nick;
     this.nicknames.set(nickLower, client);
 

@@ -420,7 +420,12 @@ class ShadowIRCClient {
       // Check E2EE encryption passphrase for channel
       const key = this.channelKeys.get(this.currentWindow.toLowerCase());
       if (key) {
-        payload = ShadowCrypto.encrypt(text, key);
+        try {
+          payload = ShadowCrypto.encrypt(text, key);
+        } catch (err) {
+          this.logMessage(this.currentWindow, `{#ff4d4d-fg}[E2EE] encryption failed — message NOT sent.{/#ff4d4d-fg}`, false);
+          return;
+        }
         e2eTag = ' {bold}{#00ff66-fg}[E2EE🔒]{/#00ff66-fg}{/bold}';
       }
 
