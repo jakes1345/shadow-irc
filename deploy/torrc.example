@@ -1,0 +1,38 @@
+# Tor configuration for Shadow IRC.
+#
+# Append to /etc/tor/torrc, then: sudo systemctl restart tor
+#
+# Two separate jobs here:
+#   1. Publish the web client as an onion service, so the network is reachable
+#      without a domain, a host, or an IP that anyone can point at.
+#   2. Provide an HTTP CONNECT port so the daemon's outbound JEV calls do not
+#      reveal this machine's IP to the moderation API.
+
+# ---- onion service ---------------------------------------------------------
+# Serves the same local port the Cloudflare tunnel does. Running both is fine
+# and intended: the tunnel is the convenient address, the onion is the one that
+# survives losing the domain.
+#
+# Port 80 (not 443) because Tor already authenticates and encrypts the
+# connection — there is no certificate and no TLS inside an onion service. The
+# web client detects this and uses ws:// rather than wss://.
+HiddenServiceDir /var/lib/tor/shadow-irc/
+HiddenServicePort 80 127.0.0.1:8888
+
+# Only v3 onions, and no relaying — this box serves its own service and nothing
+# else. It never becomes an exit or a relay for other people's traffic.
+HiddenServiceVersion 3
+
+# ---- outbound proxy for JEV ------------------------------------------------
+# An HTTP CONNECT proxy on loopback. Set TOR_PROXY=127.0.0.1:9080 in
+# /etc/shadow-irc/env so src/server/jev.js routes through it.
+HTTPTunnelPort 127.0.0.1:9080
+
+# SOCKS is not needed by anything here; leaving it bound to loopback only.
+SocksPort 127.0.0.1:9050
+
+# After restarting tor, read the address with:
+#   sudo cat /var/lib/tor/shadow-irc/hostname
+#
+# Back up /var/lib/tor/shadow-irc/ somewhere safe. Those keys ARE the address:
+# lose them and the onion address is gone permanently and cannot be recreated.

@@ -5,3 +5,8 @@ src-tauri/target/
 
 # Runtime services DB (accounts/keys) — lives on the Fly volume, never in git
 data/
+
+# Rescued/backup copies of the services DB. Encrypted, but it is account and
+# device-key data and does not belong in the repo.
+services_db.json
+*.db.b64

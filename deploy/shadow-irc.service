@@ -1,0 +1,36 @@
+[Unit]
+Description=Shadow IRC daemon
+Documentation=https://github.com/jakes1345/shadow-irc
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=shadowirc
+Group=shadowirc
+WorkingDirectory=/opt/shadow-irc
+EnvironmentFile=/etc/shadow-irc/env
+ExecStart=/usr/bin/env node src/server/ircd.js
+Restart=always
+RestartSec=5
+
+# The services DB is the only state that matters and it is not backed up
+# anywhere, so the process gets write access to exactly that directory.
+ReadWritePaths=/opt/shadow-irc/data
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shadow-irc
+
+[Install]
+WantedBy=multi-user.target

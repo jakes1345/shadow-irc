@@ -1229,12 +1229,15 @@
 
     function connectWebSocket() {
       const isTauri = !!window.__TAURI_INTERNALS__ || location.protocol === 'tauri:' || /\.localhost$/.test(location.hostname);
-      const defaultWs = isTauri
-        ? 'wss://app.shadowspace.space'
-        : (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-          ? `ws://${location.host}`
-          : `wss://${location.host}`;
-      const wsUrl = localStorage.getItem('shadow_server_addr') || defaultWs;
+      const isOnion = /\.onion$/i.test(location.hostname);
+      // Scheme follows the page, not the hostname: an onion service is plain
+      // http (Tor supplies the encryption), so wss:// there connects to nothing.
+      const sameOrigin = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+      const defaultWs = isTauri ? 'wss://app.shadowspace.space' : sameOrigin;
+      // On an onion, ignore any saved address. A clearnet one left over from a
+      // previous visit would make the browser reach out to the public domain
+      // and undo the anonymity the user came here for.
+      const wsUrl = isOnion ? sameOrigin : (localStorage.getItem('shadow_server_addr') || defaultWs);
       document.getElementById('net-status').innerText = 'CONNECTING TO ' + wsUrl + '...';
 
       try {

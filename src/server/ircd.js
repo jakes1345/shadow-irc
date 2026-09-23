@@ -1426,7 +1426,11 @@ class ShadowIRCServer {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = process.env.PORT || 6667;
   const webPort = process.env.WEB_PORT || 8888;
-  const server = new ShadowIRCServer({ port, webPort });
+  // Self-hosted behind a tunnel, set HOST=127.0.0.1 so neither listener is
+  // reachable from the local network. Defaults to all interfaces for container
+  // hosts, where the platform controls what is published.
+  const host = process.env.HOST || undefined;
+  const server = new ShadowIRCServer({ port, webPort, host });
   server.start();
 }
 

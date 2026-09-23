@@ -12,24 +12,127 @@
  *   - Oper commands: JEVCHECK, JEVASK
  */
 
-const API_URL = 'https://api.typesafe.ai/v1/systemone';
+import https from 'https';
+import net from 'net';
+import tls from 'tls';
 
-async function query(state, questions) {
-  const key = process.env.JEV_API_KEY;
-  if (!key) return null;
+const API_URL = new URL('https://api.typesafe.ai/v1/systemone');
+const TIMEOUT_MS = 4000;
 
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state, model: 'jev-latest', questions }),
-      signal: AbortSignal.timeout(4000)
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
+/**
+ * Tunnels requests through Tor's HTTP CONNECT port (HTTPTunnelPort in torrc)
+ * when TOR_PROXY is set.
+ *
+ * Without it these calls leave the machine directly, which hands the API the
+ * server's IP on every message it screens. That is fine on a cloud host and
+ * very much not fine when self-hosting from home behind a tunnel, since it
+ * leaks the origin the tunnel exists to hide.
+ *
+ * Uses https.request rather than fetch because Node's fetch cannot be given a
+ * proxy agent without pulling in undici.
+ */
+class TorConnectAgent extends https.Agent {
+  constructor(proxyHost, proxyPort) {
+    super({ keepAlive: true });
+    this.proxyHost = proxyHost;
+    this.proxyPort = proxyPort;
   }
+
+  createConnection(options, callback) {
+    const target = `${options.host}:${options.port || 443}`;
+    const proxy = net.connect(this.proxyPort, this.proxyHost);
+    let settled = false;
+
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      proxy.destroy();
+      callback(err);
+    };
+
+    proxy.once('error', fail);
+    proxy.setTimeout(TIMEOUT_MS, () => fail(new Error('tor proxy timeout')));
+
+    proxy.once('connect', () => {
+      proxy.write(`CONNECT ${target} HTTP/1.1\r\nHost: ${target}\r\n\r\n`);
+    });
+
+    // The CONNECT response can in principle arrive split, so buffer until the
+    // header terminator. Nothing follows it: the peer cannot speak before we
+    // send a TLS ClientHello, so there is no early data to preserve here.
+    let buf = '';
+    const onData = (chunk) => {
+      if (settled) return;
+      buf += chunk.toString('latin1');
+      if (!buf.includes('\r\n\r\n')) return;
+
+      proxy.removeListener('data', onData);
+      if (!/^HTTP\/1\.[01] 200/.test(buf)) return fail(new Error('tor CONNECT rejected'));
+
+      settled = true;
+      proxy.setTimeout(0);
+      proxy.removeListener('error', fail);
+
+      const socket = tls.connect({ socket: proxy, servername: options.host }, () => callback(null, socket));
+      socket.once('error', (err) => callback(err));
+    };
+    proxy.on('data', onData);
+  }
+}
+
+let cachedAgent;
+function torAgent() {
+  if (cachedAgent !== undefined) return cachedAgent;
+  const proxy = process.env.TOR_PROXY;
+  if (!proxy) {
+    cachedAgent = null;
+  } else {
+    const [host, port] = proxy.split(':');
+    cachedAgent = new TorConnectAgent(host || '127.0.0.1', parseInt(port || '9080', 10));
+  }
+  return cachedAgent;
+}
+
+function query(state, questions) {
+  const key = process.env.JEV_API_KEY;
+  if (!key) return Promise.resolve(null);
+
+  const body = JSON.stringify({ state, model: 'jev-latest', questions });
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    const req = https.request({
+      hostname: API_URL.hostname,
+      port: 443,
+      path: API_URL.pathname,
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      },
+      agent: torAgent() || undefined,
+      timeout: TIMEOUT_MS
+    }, (res) => {
+      if (res.statusCode !== 200) { res.resume(); return done(null); }
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try { done(JSON.parse(data)); } catch { done(null); }
+      });
+    });
+
+    req.on('error', () => done(null));
+    req.on('timeout', () => { req.destroy(); done(null); });
+    req.end(body);
+  });
 }
 
 // ─── Connection screening ─────────────────────────────────────────────────────
