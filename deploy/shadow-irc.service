@@ -10,7 +10,10 @@ User=shadowirc
 Group=shadowirc
 WorkingDirectory=/opt/shadow-irc
 EnvironmentFile=/etc/shadow-irc/env
-ExecStart=/usr/bin/env node src/server/ircd.js
+# __NODE_BIN__ is replaced with an absolute path by deploy/setup.sh. Left as a
+# literal here because the correct path differs per machine, and a node managed
+# by fnm/nvm under /home is unreachable with ProtectHome=true.
+ExecStart=__NODE_BIN__ src/server/ircd.js
 Restart=always
 RestartSec=5
 

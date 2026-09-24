@@ -21,10 +21,27 @@ die() { echo "error: $*" >&2; exit 1; }
 say() { echo "==> $*"; }
 
 [[ $EUID -eq 0 ]] || die "run with sudo"
-command -v node >/dev/null || die "node is not installed"
+command -v rsync >/dev/null || die "rsync is not installed (apt install rsync)"
 
-NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-(( NODE_MAJOR >= 20 )) || die "node 20+ required, found $(node --version)"
+# Resolve node to an absolute path outside /home. The unit sets
+# ProtectHome=true, so a version-manager install under the user's home (fnm,
+# nvm, asdf) is unreachable at runtime even though it works in your shell.
+NODE_BIN=""
+for candidate in /usr/bin/node /usr/local/bin/node /opt/node/bin/node; do
+  [[ -x "$candidate" ]] && { NODE_BIN="$candidate"; break; }
+done
+[[ -n "$NODE_BIN" ]] || die "no system-wide node found in /usr/bin, /usr/local/bin or /opt/node/bin.
+A node managed by fnm/nvm under your home directory will not work as a service.
+Install one system-wide, e.g.:  sudo apt install nodejs npm"
+
+NODE_MAJOR="$("$NODE_BIN" -p 'process.versions.node.split(".")[0]')"
+(( NODE_MAJOR >= 18 )) || die "node 18+ required, found $("$NODE_BIN" --version) at $NODE_BIN"
+say "using $NODE_BIN ($("$NODE_BIN" --version))"
+(( NODE_MAJOR >= 20 )) || say "warning: node $NODE_MAJOR is past end-of-life; upgrading is advisable"
+
+NPM_BIN="$(dirname "$NODE_BIN")/npm"
+[[ -x "$NPM_BIN" ]] || command -v npm >/dev/null || die "npm not found alongside $NODE_BIN"
+[[ -x "$NPM_BIN" ]] || NPM_BIN="$(command -v npm)"
 
 # ---- service account -------------------------------------------------------
 if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then
@@ -45,7 +62,7 @@ rsync -a --delete \
   "$REPO_DIR"/ "$APP_DIR"/
 
 say "installing production dependencies"
-( cd "$APP_DIR" && npm ci --omit=dev --silent )
+( cd "$APP_DIR" && PATH="$(dirname "$NODE_BIN"):$PATH" "$NPM_BIN" ci --omit=dev --silent )
 
 mkdir -p "$APP_DIR/data"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR"
@@ -74,13 +91,6 @@ SERVICES_DB_KEY=
 # Password for the master account.
 MASTER_PASSWORD=
 
-# Optional. Without it the JEV moderation calls are skipped entirely.
-JEV_API_KEY=
-
-# Routes JEV's outbound calls through Tor's HTTP CONNECT port so they do not
-# expose this machine's IP to the API. Requires HTTPTunnelPort in torrc.
-# Leave blank to call the API directly.
-TOR_PROXY=127.0.0.1:9080
 EOF
   chmod 600 "$ENV_FILE"
   chown root:root "$ENV_FILE"
@@ -94,8 +104,10 @@ if [[ -f "$REPO_DIR/services_db.json" && ! -f "$APP_DIR/data/services_db.json" ]
 fi
 
 # ---- service ---------------------------------------------------------------
-say "installing systemd unit"
-install -m 644 "$REPO_DIR/deploy/shadow-irc.service" /etc/systemd/system/shadow-irc.service
+say "installing systemd unit (node: $NODE_BIN)"
+sed "s|__NODE_BIN__|$NODE_BIN|" "$REPO_DIR/deploy/shadow-irc.service" \
+  > /etc/systemd/system/shadow-irc.service
+chmod 644 /etc/systemd/system/shadow-irc.service
 systemctl daemon-reload
 systemctl enable shadow-irc >/dev/null
 
@@ -132,7 +144,7 @@ replace TUNNEL_ID with the id that `tunnel create` printed, and run:
   sudo cloudflared service install
   sudo systemctl restart cloudflared
 
-For the onion address and to keep JEV from leaking this machine's IP:
+For the onion address:
 
   sudo apt install tor
   cat deploy/torrc.example | sudo tee -a /etc/tor/torrc

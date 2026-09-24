@@ -14,7 +14,7 @@ import { IRCServicesEngine } from './services.js';
 import { IRCv3HistoryEngine, IRCv3CapNegotiator } from './ircv3.js';
 import { BouncerEngine } from './bouncer.js';
 import { BanEngine } from './banEngine.js';
-import { evaluateMessage, assessUser, askDecision, screenConnection, validateNick, evaluateJoin, evaluateKickEscalation, sweepUsers } from './jev.js';
+import { LocalModerator } from './moderation.js';
 
 /**
  * SHADOW-IRCD v4.0: Deep Space Cosmic Nebula IRC Server Daemon
@@ -78,8 +78,9 @@ class ShadowIRCServer {
     this.maxMessageRate = 12;
     this.maxConnectionsPerIp = 5;
 
-    // JEV: per-nick recent message cache (last 10 per channel, for context)
-    this.jevMsgCache = new Map(); // `${nickLower}:${chanLower}` -> string[]
+    // Moderation runs entirely in-process. Nothing about a message, nick or
+    // host is sent anywhere: an anonymous network cannot outsource that.
+    this.moderator = new LocalModerator();
 
     // Invite tokens: token -> { nick, createdAt, expiresAt, uses, maxUses }
     this.inviteTokens = new Map();
@@ -122,46 +123,22 @@ class ShadowIRCServer {
     // Cloudflare/Fly proxies drop idle sockets after ~100s; ping well inside that window
     this.pingInterval = setInterval(() => this.pingClients(), 30000);
 
-    // JEV periodic sweep: scan all users every 5 minutes, alert opers of threats
-    if (process.env.JEV_API_KEY) {
-      setInterval(() => this.jevSweep(), 5 * 60 * 1000);
-    }
+    // Expire idle per-nick moderation state and report anyone over threshold.
+    setInterval(() => this.moderationSweep(), 5 * 60 * 1000);
   }
 
-  jevSweep() {
-    const users = [];
-    for (const client of this.clients.values()) {
-      if (!client.registered || client.isOper) continue;
-      const ageMin = client.connectedAt ? Math.floor((Date.now() - client.connectedAt) / 60000) : 0;
-      let msgCount = 0;
-      const recentMsgs = [];
-      for (const [key, history] of this.jevMsgCache) {
-        if (key.startsWith(client.nickname?.toLowerCase() + ':')) {
-          msgCount += history.length;
-          recentMsgs.push(...history.slice(-3));
-        }
-      }
-      users.push({
-        nick: client.nickname,
-        host: client.hostname,
-        ageMin,
-        channelCount: client.channels.size,
-        msgCount,
-        recentMsgs
-      });
-    }
-    if (users.length === 0) return;
+  moderationSweep() {
+    this.moderator.sweep();
 
-    sweepUsers(users).then(threats => {
-      if (threats.length === 0) return;
-      for (const client of this.clients.values()) {
-        if (!client.isOper || !client.registered) continue;
-        for (const t of threats) {
-          const flag = t.flag === 'HIGH' ? '🔴' : '🟡';
-          this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV Sweep] ${flag} ${t.nick} — threat score ${(t.score * 100).toFixed(0)}% (${t.flag})`);
-        }
+    const flagged = this.moderator.flagged();
+    if (flagged.length === 0) return;
+
+    for (const client of this.clients.values()) {
+      if (!client.isOper || !client.registered) continue;
+      for (const f of flagged) {
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[MOD] ${f.nick} — ${f.offenses} offenses in the last 5m`);
       }
-    }).catch(() => {});
+    }
   }
 
   pingClients() {
@@ -187,13 +164,9 @@ class ShadowIRCServer {
     this.ipConnections.set(ip, count + 1);
     const client = this.createClientState(socket, ip, 'TCP');
 
-    // JEV connection screen (async, drop if high-confidence threat)
-    screenConnection(ip, null).then(verdict => {
-      if (verdict.block && this.clients.has(socket)) {
-        socket.write('ERROR :Connection refused by network policy\r\n');
-        socket.destroy();
-      }
-    }).catch(() => {});
+    // Connection abuse is handled by the per-IP cap above. Behind a tunnel or
+    // an onion every peer is loopback anyway, so there is nothing in the
+    // address itself worth screening on.
 
     socket.on('data', (chunk) => {
       this.processRawInput(client, chunk.toString('utf8'));
@@ -213,13 +186,6 @@ class ShadowIRCServer {
     }
     this.ipConnections.set(ip, count + 1);
     const client = this.createClientState(ws, ip, 'WebSocket');
-
-    // JEV connection screen
-    screenConnection(ip, null).then(verdict => {
-      if (verdict.block && this.clients.has(ws)) {
-        ws.close(1008, 'Connection refused by network policy');
-      }
-    }).catch(() => {});
 
     ws.on('message', (message) => {
       this.processRawInput(client, message.toString('utf8'));
@@ -294,21 +260,17 @@ class ShadowIRCServer {
     }
   }
 
-  // jevMsgCache is keyed `${nick}:${channel}`; without this the map keeps an
-  // entry for every nick/channel pair that ever spoke, for the life of the process.
-  dropJevCacheFor(nick) {
-    if (!nick) return;
-    const prefix = nick.toLowerCase() + ':';
-    for (const key of this.jevMsgCache.keys()) {
-      if (key.startsWith(prefix)) this.jevMsgCache.delete(key);
-    }
+  // Moderation state is per-nick, so it has to be released on quit and on
+  // rename or the maps grow for the life of the process.
+  dropModerationStateFor(nick) {
+    this.moderator.forget(nick);
   }
 
   handleDisconnect(client, reason) {
     if (!this.clients.has(client.connection)) return;
     if (client.shadowTimer) clearTimeout(client.shadowTimer);
 
-    this.dropJevCacheFor(client.nickname);
+    this.dropModerationStateFor(client.nickname);
 
     if (client.ip) {
       const n = (this.ipConnections.get(client.ip) || 1) - 1;
@@ -483,11 +445,11 @@ class ShadowIRCServer {
         break;
       case 'PASS':
         break;
-      case 'JEVCHECK':
-        this.handleJevCheck(client, args[0]);
+      case 'MODCHECK':
+        this.handleModCheck(client, args[0]);
         break;
-      case 'JEVASK':
-        this.handleJevAsk(client, args.join(' '));
+      case 'MODLIST':
+        this.handleModList(client);
         break;
       case 'INVITELINK':
         this.handleInviteLink(client, args[0]);
@@ -562,21 +524,22 @@ class ShadowIRCServer {
     const oldNick = client.nickname;
     if (oldNick) {
       this.nicknames.delete(oldNick.toLowerCase());
-      this.dropJevCacheFor(oldNick);
+      this.dropModerationStateFor(oldNick);
     }
 
     client.nickname = nick;
     this.nicknames.set(nickLower, client);
 
-    // JEV nick impersonation check (async, silent deny if suspicious)
+    // Reject nicks that impersonate services or staff.
     if (!client.isOper) {
-      validateNick(nick).then(verdict => {
-        if (verdict.suspicious && this.clients.has(client.connection)) {
-          this.send(client, `:${this.serverName} 433 * ${nick} :Nickname not allowed`);
-          client.nickname = null;
-          this.nicknames.delete(nickLower);
-        }
-      }).catch(() => {});
+      const verdict = this.moderator.validateNick(nick);
+      if (verdict.suspicious) {
+        this.send(client, `:${this.serverName} 433 * ${nick} :Nickname not allowed (${verdict.reason})`);
+        client.nickname = oldNick || null;
+        this.nicknames.delete(nickLower);
+        if (oldNick) this.nicknames.set(oldNick.toLowerCase(), client);
+        return;
+      }
     }
 
     if (oldNick) {
@@ -723,21 +686,14 @@ class ShadowIRCServer {
         continue;
       }
 
-      // JEV join gate (async — if JEV denies, kick them after join completes)
-      if (!client.isOper && !isFirst && process.env.JEV_API_KEY) {
-        const ageMin = client.connectedAt ? Math.floor((Date.now() - client.connectedAt) / 60000) : 0;
-        evaluateJoin(client.nickname, client.hostname, name, channel.topic, client.msgCount, ageMin)
-          .then(verdict => {
-            if (!verdict.allow && channel.members.has(client)) {
-              const kickMsg = `:${this.serverName} KICK ${name} ${client.nickname} :${verdict.reason}`;
-              this.broadcastChannel(channel, kickMsg);
-              channel.members.delete(client);
-              channel.ops.delete(client);
-              channel.voice.delete(client);
-              client.channels.delete(chanLower);
-            }
-          })
-          .catch(() => {});
+      // Join-rate gate. Synchronous, so a refusal happens before the join
+      // rather than kicking them back out a moment later.
+      if (!client.isOper && !isFirst) {
+        const verdict = this.moderator.evaluateJoin(client.nickname);
+        if (!verdict.allow) {
+          this.send(client, `:${this.serverName} 479 ${client.nickname} ${name} :Cannot join channel (${verdict.reason})`);
+          continue;
+        }
       }
 
       // Check Invite-Only Mode (+i)
@@ -875,42 +831,33 @@ class ShadowIRCServer {
         this.send(client, msgFormatted);
       }
 
-      // JEV auto-mod (fire-and-forget, never blocks message routing)
-      if (!isNotice && !client.isOper && process.env.JEV_API_KEY) {
-        const cacheKey = `${client.nickname.toLowerCase()}:${chanLower}`;
-        const history = this.jevMsgCache.get(cacheKey) || [];
-        history.push(message);
-        if (history.length > 10) history.shift();
-        this.jevMsgCache.set(cacheKey, history);
+      // Local auto-mod. Synchronous and in-process: the message has already
+      // been relayed above, so this only decides what happens to the sender.
+      if (!isNotice && !client.isOper) {
+        const verdict = this.moderator.evaluateMessage(
+          client.nickname, client.hostname, target, message, channel.members
+        );
 
-        evaluateMessage(client.nickname, client.hostname, target, message, history.slice(0, -1))
-          .then(verdict => {
-            if (!verdict || verdict.action === 'ignore' || verdict.confidence < 0.75) return;
-            if (verdict.action === 'warn') {
-              this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[AutoMod] Warning: your last message was flagged. Please review the rules.`);
-            } else if (verdict.action === 'kick' && channel.members.has(client)) {
-              const kickMsg = `:${this.serverName} KICK ${target} ${client.nickname} :AutoMod: message policy violation`;
-              this.broadcastChannel(channel, kickMsg);
-              channel.members.delete(client);
-              channel.ops.delete(client);
-              channel.voice.delete(client);
-              client.channels.delete(chanLower);
-            } else if (verdict.action === 'ban') {
-              if (!channel.bans) channel.bans = new Set();
-              channel.bans.add(`*!*@${client.hostname}`);
-              const modeMsg = `:${this.serverName} MODE ${target} +b *!*@${client.hostname}`;
-              this.broadcastChannel(channel, modeMsg);
-              const kickMsg = `:${this.serverName} KICK ${target} ${client.nickname} :AutoMod: banned`;
-              if (channel.members.has(client)) {
-                this.broadcastChannel(channel, kickMsg);
-                channel.members.delete(client);
-                channel.ops.delete(client);
-                channel.voice.delete(client);
-                client.channels.delete(chanLower);
-              }
-            }
-          })
-          .catch(() => {});
+        if (verdict.action === 'warn') {
+          this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[AutoMod] Slow down — ${verdict.reason}`);
+        } else if (verdict.action === 'kick' && channel.members.has(client)) {
+          this.broadcastChannel(channel, `:${this.serverName} KICK ${target} ${client.nickname} :AutoMod: ${verdict.reason}`);
+          channel.members.delete(client);
+          channel.ops.delete(client);
+          channel.voice.delete(client);
+          client.channels.delete(chanLower);
+        } else if (verdict.action === 'ban') {
+          if (!channel.bans) channel.bans = new Set();
+          channel.bans.add(`*!*@${client.hostname}`);
+          this.broadcastChannel(channel, `:${this.serverName} MODE ${target} +b *!*@${client.hostname}`);
+          if (channel.members.has(client)) {
+            this.broadcastChannel(channel, `:${this.serverName} KICK ${target} ${client.nickname} :AutoMod: ${verdict.reason}`);
+            channel.members.delete(client);
+            channel.ops.delete(client);
+            channel.voice.delete(client);
+            client.channels.delete(chanLower);
+          }
+        }
       }
     } else {
       // Check bouncer state first: a detached nick still has a stale (dead)
@@ -1161,20 +1108,12 @@ class ShadowIRCServer {
       channel.voice.delete(victim);
       victim.channels.delete(channel.name.toLowerCase());
 
-      // JEV kick escalation: should the kick become a ban?
-      if (process.env.JEV_API_KEY) {
-        const cacheKey = `${victim.nickname.toLowerCase()}:${channel.name.toLowerCase()}`;
-        const history = this.jevMsgCache.get(cacheKey) || [];
-        evaluateKickEscalation(victim.nickname, victim.hostname, channel.name, kickReason, history)
-          .then(verdict => {
-            if (verdict.ban) {
-              if (!channel.bans) channel.bans = new Set();
-              channel.bans.add(`*!*@${victim.hostname}`);
-              this.broadcastChannel(channel, `:${this.serverName} MODE ${channel.name} +b *!*@${victim.hostname}`);
-              this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Auto-ban applied for ${victim.nickname} (${(verdict.confidence * 100).toFixed(0)}% confidence)`);
-            }
-          })
-          .catch(() => {});
+      // A repeat offender who keeps coming back gets the kick upgraded.
+      if (this.moderator.shouldBanAfterKick(victim.nickname)) {
+        if (!channel.bans) channel.bans = new Set();
+        channel.bans.add(`*!*@${victim.hostname}`);
+        this.broadcastChannel(channel, `:${this.serverName} MODE ${channel.name} +b *!*@${victim.hostname}`);
+        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[AutoMod] Ban applied — ${victim.nickname} is a repeat offender`);
       }
     }
   }
@@ -1252,13 +1191,13 @@ class ShadowIRCServer {
     this.send(client, `:${this.serverName} 303 ${client.nickname} :${online}`);
   }
 
-  handleJevCheck(client, targetNick) {
+  handleModCheck(client, targetNick) {
     if (!client.isOper) {
       this.send(client, `:${this.serverName} 481 ${client.nickname} :Permission Denied`);
       return;
     }
     if (!targetNick) {
-      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :Usage: JEVCHECK <nick>`);
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :Usage: MODCHECK <nick>`);
       return;
     }
     const target = this.nicknames.get(targetNick.toLowerCase());
@@ -1266,60 +1205,22 @@ class ShadowIRCServer {
       this.send(client, `:${this.serverName} 401 ${client.nickname} ${targetNick} :No such nick`);
       return;
     }
-    this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Assessing ${targetNick}...`);
-
-    const msgs = [];
-    for (const [key, history] of this.jevMsgCache) {
-      if (key.startsWith(target.nickname.toLowerCase() + ':')) {
-        const chan = key.split(':')[1];
-        history.forEach(m => msgs.push({ channel: chan, text: m }));
-      }
-    }
-
-    const joinAgeMin = target.connectedAt
-      ? Math.floor((Date.now() - target.connectedAt) / 60000)
-      : 0;
-
-    assessUser(target.nickname, target.hostname, target.ip, msgs, target.channels?.size ?? 0, joinAgeMin)
-      .then(report => {
-        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${report}`);
-      })
-      .catch(() => {
-        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Error contacting JEV.`);
-      });
+    this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${this.moderator.report(target.nickname)}`);
   }
 
-  handleJevAsk(client, question) {
+  handleModList(client) {
     if (!client.isOper) {
       this.send(client, `:${this.serverName} 481 ${client.nickname} :Permission Denied`);
       return;
     }
-    if (!question) {
-      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :Usage: JEVASK <question about the network>`);
+    const flagged = this.moderator.flagged();
+    if (!flagged.length) {
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[MOD] Nobody is currently flagged.`);
       return;
     }
-
-    const connectedNicks = [...this.nicknames.keys()].join(', ') || 'none';
-    const channelList = [...this.channels.entries()]
-      .map(([name, ch]) => `${name}(${ch.members.size})`)
-      .join(', ') || 'none';
-
-    const state = [
-      `Shadow IRC network state:`,
-      `Connected users (${this.nicknames.size}): ${connectedNicks}`,
-      `Active channels: ${channelList}`,
-      `Question from oper ${client.nickname}: ${question}`
-    ].join('\n');
-
-    this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Thinking...`);
-
-    askDecision(state, question)
-      .then(answer => {
-        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :${answer}`);
-      })
-      .catch(() => {
-        this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[JEV] Error contacting JEV.`);
-      });
+    for (const f of flagged) {
+      this.send(client, `:${this.serverName} NOTICE ${client.nickname} :[MOD] ${f.nick} — ${f.offenses} offenses in the last 5m`);
+    }
   }
 
   requireAuth(client) {

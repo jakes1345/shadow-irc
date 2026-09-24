@@ -2,11 +2,11 @@
 #
 # Append to /etc/tor/torrc, then: sudo systemctl restart tor
 #
-# Two separate jobs here:
-#   1. Publish the web client as an onion service, so the network is reachable
-#      without a domain, a host, or an IP that anyone can point at.
-#   2. Provide an HTTP CONNECT port so the daemon's outbound JEV calls do not
-#      reveal this machine's IP to the moderation API.
+# Publishes the web client as an onion service, so the network is reachable
+# without a domain, a host, or an IP that anyone can point at.
+#
+# The daemon makes no outbound requests of its own — moderation runs in
+# process — so there is nothing here to proxy outward.
 
 # ---- onion service ---------------------------------------------------------
 # Serves the same local port the Cloudflare tunnel does. Running both is fine
@@ -23,12 +23,7 @@ HiddenServicePort 80 127.0.0.1:8888
 # else. It never becomes an exit or a relay for other people's traffic.
 HiddenServiceVersion 3
 
-# ---- outbound proxy for JEV ------------------------------------------------
-# An HTTP CONNECT proxy on loopback. Set TOR_PROXY=127.0.0.1:9080 in
-# /etc/shadow-irc/env so src/server/jev.js routes through it.
-HTTPTunnelPort 127.0.0.1:9080
-
-# SOCKS is not needed by anything here; leaving it bound to loopback only.
+# Nothing here needs outbound Tor, so SOCKS stays on loopback and unused.
 SocksPort 127.0.0.1:9050
 
 # After restarting tor, read the address with:
