@@ -3,10 +3,14 @@ src-tauri/target/
 *.log
 .DS_Store
 
-# Runtime services DB (accounts/keys) — lives on the Fly volume, never in git
+# Runtime services DB (accounts/keys) — lives in /opt/shadow-irc/data, never in git
 data/
 
 # Rescued/backup copies of the services DB. Encrypted, but it is account and
 # device-key data and does not belong in the repo.
 services_db.json
 *.db.b64
+
+# Claude Code local config and worktrees. settings.json carries infra posture
+# notes and worktrees/ holds entire checkouts; this repo is public.
+.claude/
