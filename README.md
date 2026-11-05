@@ -22,7 +22,7 @@
 
 SHADOW-IRC is a self-hosted IRC network in one Node.js process. It speaks standard IRC (RFC 1459/2812) over TCP and WebSocket, so ordinary IRC clients work. It also adds the things a small network normally gets from a separate services package and a bouncer: nickname and channel registration, offline memos, vhosts, session persistence and channel history.
 
-It is built for a small community that wants to own its chat. The server makes no outbound requests, moderation runs in-process, and it can be published as a Tor onion service as well as on a domain.
+I wrote it for small communities that want to run their own chat instead of renting someone else's. The server makes no outbound requests, moderation happens in-process, and you can publish it as a Tor onion service alongside a normal domain.
 
 ## What's in the repo
 
@@ -57,8 +57,8 @@ It is built for a small community that wants to own its chat. The server makes n
 | MemoServ | `SEND <nick> <message>`, `READ`, `DELETE <n\|ALL>` |
 | HostServ | `REQUEST <vhost>` |
 
-- **Accounts are device keys, not passwords.** Each device has an ECDSA P-256 key pair, and you log in by signing a one-time challenge. The desktop app creates its key with WebCrypto as non-extractable, so the private key can't be exported, even by the app. Up to 10 devices can be linked to one nickname. Passwords (PBKDF2 with a salt per account) are an optional fallback.
-- **The services database is encrypted at rest.** It is stored as AES-256-GCM, keyed from `SERVICES_DB_KEY` in the process environment, never on disk. If the key is missing or wrong, the server runs without saving rather than overwriting the database.
+- Accounts are tied to device keys rather than passwords. Each device has an ECDSA P-256 key pair, and you log in by signing a one-time challenge. The desktop app creates its key with WebCrypto as non-extractable, so the private key can't be exported, even by the app. Up to 10 devices can be linked to one nickname. Passwords (PBKDF2 with a salt per account) are an optional fallback.
+- The services database is encrypted at rest with AES-256-GCM. The key comes from `SERVICES_DB_KEY` in the process environment and is never written to disk. If the key is missing or wrong, the server runs without saving rather than overwriting the database.
 
 **Bouncer**
 
@@ -133,14 +133,16 @@ All settings come from environment variables.
 
 ## Deploying
 
-**Fly.io.** `fly.toml` runs one machine with a volume at `/app/data`. HTTPS and WebSocket are on 443, and IRC on 6697 with TLS terminated by Fly. Set the two secrets first:
+### Fly.io
+
+`fly.toml` runs one machine with a volume at `/app/data`. HTTPS and WebSocket are on 443, and IRC on 6697 with TLS terminated by Fly. Set the two secrets first:
 
 ```bash
 fly secrets set SERVICES_DB_KEY="$(openssl rand -hex 32)" MASTER_PASSWORD="$(openssl rand -base64 24)"
 fly deploy
 ```
 
-**Docker.**
+### Docker
 
 ```bash
 docker build -t shadow-irc .
@@ -148,7 +150,9 @@ docker run -p 6667:6667 -p 8888:8888 -v shadow-data:/app/data \
   -e SERVICES_DB_KEY=... -e MASTER_PASSWORD=... shadow-irc
 ```
 
-**Your own Linux machine.** The daemon binds to loopback only, and a Cloudflare Tunnel and a Tor onion service publish it:
+### Your own Linux machine
+
+Here the daemon binds to loopback only, and a Cloudflare Tunnel and a Tor onion service publish it:
 
 ```bash
 sudo ./deploy/setup.sh            # installs to /opt/shadow-irc as a systemd service
